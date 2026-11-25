@@ -294,6 +294,27 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
 /* announcements */
 .ann-list{display:grid;gap:12px}.ann-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;gap:12px}.ann-card .av{width:40px;height:40px;border-radius:50%;flex:none;background:var(--panel2)}.ann-body{flex:1;min-width:0}.ann-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:8px}.ann-head time{font-size:12px;color:var(--dim)}.ann-text{white-space:pre-wrap;overflow-wrap:anywhere;color:#d5dae6}.ann-images{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.ann-images img{width:150px;height:110px;object-fit:cover;border-radius:9px;border:1px solid var(--line);cursor:zoom-in}.ann-compose{margin-bottom:16px}.ann-compose textarea{min-height:100px}.ann-compose-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
 
+
+/* profile cards, emoji picker and mentions */
+.profile-trigger{border:0;background:none;color:inherit;font:inherit;cursor:pointer;padding:0;text-align:left}
+.profile-trigger:hover{color:var(--acc2);text-decoration:underline}
+.forum-msg-head .profile-trigger{font-weight:700}
+.profile-avatar-trigger{border:0;background:none;padding:0;cursor:pointer;align-self:flex-start}
+.profile-avatar-trigger .av{display:block}
+.mention-everyone{display:inline-block;background:rgba(124,108,255,.18);color:#c7beff;border:1px solid rgba(124,108,255,.32);padding:1px 6px;border-radius:6px;font-weight:700}
+.emoji-tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.emoji-picker{position:fixed;z-index:90;width:min(320px,calc(100vw - 24px));padding:10px;background:var(--panel);border:1px solid var(--line2);border-radius:12px;box-shadow:var(--sh);display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.emoji-picker button{border:0;background:transparent;border-radius:7px;padding:6px;font-size:20px;cursor:pointer}
+.emoji-picker button:hover{background:var(--panel2)}
+.profile-pop-bg{position:fixed;inset:0;background:rgba(5,6,10,.62);backdrop-filter:blur(3px);display:grid;place-items:center;z-index:95;padding:18px}
+.profile-pop{width:min(360px,100%);overflow:hidden;background:var(--panel);border:1px solid var(--line2);border-radius:16px;box-shadow:var(--sh)}
+.profile-pop-banner{height:86px;background:var(--panel2) center/cover}
+.profile-pop-content{padding:0 18px 18px}
+.profile-pop-avatar{width:68px;height:68px;border-radius:50%;border:4px solid var(--panel);margin-top:-34px;object-fit:cover;background:var(--panel2)}
+.profile-pop-name{font-size:17px;font-weight:800;margin-top:8px}
+.profile-pop-meta{color:var(--mut);font-size:12px;margin-top:5px}
+.profile-pop-close{float:right;margin-top:12px}
+
 </style>
 </head>
 <body>
@@ -447,8 +468,12 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
             <textarea id="forumMessageText" maxlength="3000" placeholder="Message this channel…"></textarea>
             <div class="forum-preview" id="forumMessagePreview"></div>
             <div class="forum-compose-foot">
-              <label class="forum-upload btn ghost sm" for="forumMessageFiles"><svg><use href="#i-image"/></svg> Add images <span id="forumImageCount">0/4</span></label>
-              <input id="forumMessageFiles" type="file" accept="image/*" multiple>
+              <div class="emoji-tools">
+                <label class="forum-upload btn ghost sm" for="forumMessageFiles"><svg><use href="#i-image"/></svg> Add images <span id="forumImageCount">0/4</span></label>
+                <input id="forumMessageFiles" type="file" accept="image/*" multiple>
+                <button class="btn ghost sm" type="button" data-emoji-target="forumMessageText">😊 Emoji</button>
+                <button class="btn ghost sm staff-mention hide" type="button" data-mention-target="forumMessageText">@everyone</button>
+              </div>
               <button class="btn sm" id="forumSendBtn" type="submit">Send message</button>
             </div>
             <div class="err" id="forumMessageErr"></div>
@@ -463,7 +488,7 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
       <form class="card ann-compose hide" id="announcementForm">
         <div class="field"><label for="announcementText">Nouvelle annonce</label><textarea id="announcementText" maxlength="4000" placeholder="Écris une annonce pour les membres…"></textarea></div>
         <div class="forum-preview" id="announcementPreview"></div>
-        <div class="ann-compose-foot"><label class="forum-upload btn ghost sm" for="announcementFiles"><svg><use href="#i-image"/></svg> Ajouter des images <span id="announcementImageCount">0/4</span></label><input id="announcementFiles" type="file" accept="image/*" multiple style="display:none"><button class="btn" id="announcementSend" type="submit">Publier</button></div>
+        <div class="ann-compose-foot"><div class="emoji-tools"><label class="forum-upload btn ghost sm" for="announcementFiles"><svg><use href="#i-image"/></svg> Ajouter des images <span id="announcementImageCount">0/4</span></label><input id="announcementFiles" type="file" accept="image/*" multiple style="display:none"><button class="btn ghost sm" type="button" data-emoji-target="announcementText">😊 Emoji</button><button class="btn ghost sm staff-mention hide" type="button" data-mention-target="announcementText">@everyone</button></div><button class="btn" id="announcementSend" type="submit">Publier</button></div>
         <div class="err" id="announcementErr"></div>
       </form>
       <div class="ann-list" id="announcementList"><div class="forum-empty">Chargement des annonces…</div></div>
@@ -668,6 +693,9 @@ async function openForumChannel(id, refreshList = true) {
     $("forumMessages").innerHTML = `<div class="forum-empty">${esc(e.message)}</div>`;
   }
 }
+function renderChatText(value) {
+  return esc(value || "").replace(/@everyone\b/gi, '<span class="mention-everyone">@everyone</span>');
+}
 function renderForumMessages(messages) {
   if (!messages.length) {
     $("forumMessages").innerHTML = '<div class="forum-empty">No messages yet. Say hello to start this channel.</div>';
@@ -675,10 +703,12 @@ function renderForumMessages(messages) {
   }
   $("forumMessages").innerHTML = messages.map(m => `
     <div class="forum-msg">
-      <img class="av" src="${esc(m.avatar || "https://cdn.discordapp.com/embed/avatars/0.png")}" alt="">
+      <button class="profile-avatar-trigger" type="button" data-profile='${esc(JSON.stringify({id:m.uid,name:m.author,avatar:m.avatar}))}' title="Voir le profil">
+        <img class="av" src="${esc(m.avatar || "https://cdn.discordapp.com/embed/avatars/0.png")}" alt="">
+      </button>
       <div class="forum-msg-main">
-        <div class="forum-msg-head"><b>${esc(m.author)}</b><time>${new Date(m.at).toLocaleString()}</time></div>
-        ${m.text ? `<div class="forum-msg-text">${esc(m.text)}</div>` : ""}
+        <div class="forum-msg-head"><button class="profile-trigger" type="button" data-profile='${esc(JSON.stringify({id:m.uid,name:m.author,avatar:m.avatar}))}'>${esc(m.author)}</button><time>${new Date(m.at).toLocaleString()}</time></div>
+        ${m.text ? `<div class="forum-msg-text">${renderChatText(m.text)}</div>` : ""}
         ${(m.images || []).length ? `<div class="forum-msg-images">${m.images.map(src => `<img src="${esc(src)}" alt="Attachment">`).join("")}</div>` : ""}
       </div>
       ${me && (me.role === "owner" || me.role === "admin" || m.uid === me.id) ? `<button class="icon-btn" title="Delete message" data-forum-message-delete="${esc(m.id)}">×</button>` : ""}
@@ -777,13 +807,86 @@ async function loadAnnouncements() {
 }
 function renderAnnouncements(items) {
   if (!items.length) { $("announcementList").innerHTML = '<div class="forum-empty">Aucune annonce pour le moment.</div>'; return; }
-  $("announcementList").innerHTML = items.map(a => `<article class="ann-card"><img class="av" src="${esc(a.avatar || "https://cdn.discordapp.com/embed/avatars/0.png")}" alt=""><div class="ann-body"><div class="ann-head"><b>${esc(a.author)}</b><span class="role ${esc(a.role || "admin")}">${esc(a.role || "admin")}</span><time>${new Date(a.at).toLocaleString()}</time>${admin ? `<button class="icon-btn" style="margin-left:auto" title="Supprimer" data-ann-delete="${esc(a.id)}">×</button>` : ""}</div>${a.text ? `<div class="ann-text">${esc(a.text)}</div>` : ""}${(a.images || []).length ? `<div class="ann-images">${a.images.map(src => `<img src="${esc(src)}" alt="Image de l’annonce">`).join("")}</div>` : ""}</div></article>`).join("");
+  $("announcementList").innerHTML = items.map(a => `<article class="ann-card"><button class="profile-avatar-trigger" type="button" data-profile='${esc(JSON.stringify({id:a.uid,name:a.author,avatar:a.avatar,role:a.role}))}' title="Voir le profil"><img class="av" src="${esc(a.avatar || "https://cdn.discordapp.com/embed/avatars/0.png")}" alt=""></button><div class="ann-body"><div class="ann-head"><button class="profile-trigger" type="button" data-profile='${esc(JSON.stringify({id:a.uid,name:a.author,avatar:a.avatar,role:a.role}))}'>${esc(a.author)}</button><span class="role ${esc(a.role || "admin")}">${esc(a.role || "admin")}</span><time>${new Date(a.at).toLocaleString()}</time>${admin ? `<button class="icon-btn" style="margin-left:auto" title="Supprimer" data-ann-delete="${esc(a.id)}">×</button>` : ""}</div>${a.text ? `<div class="ann-text">${renderChatText(a.text)}</div>` : ""}${(a.images || []).length ? `<div class="ann-images">${a.images.map(src => `<img src="${esc(src)}" alt="Image de l’annonce">`).join("")}</div>` : ""}</div></article>`).join("");
   $("announcementList").querySelectorAll(".ann-images img").forEach(img => img.onclick = () => lightbox(img.src));
   $("announcementList").querySelectorAll("[data-ann-delete]").forEach(b => b.onclick = async () => { if (!await confirmBox("Supprimer cette annonce ?", "Cette action est définitive.", "Supprimer")) return; try { await api("/api/announcements?id=" + encodeURIComponent(b.dataset.annDelete), { method: "DELETE" }); toast("Annonce supprimée"); loadAnnouncements(); } catch(e) { toast(e.message, true); } });
 }
 function renderAnnouncementPreview() { $("announcementPreview").innerHTML = announcementImages.map((src,i) => `<div class="pimg"><img src="${src}" alt=""><button type="button" data-ann-img-remove="${i}">×</button></div>`).join(""); $("announcementImageCount").textContent = announcementImages.length + "/4"; $("announcementPreview").querySelectorAll("[data-ann-img-remove]").forEach(b => b.onclick = () => { announcementImages.splice(+b.dataset.annImgRemove,1); renderAnnouncementPreview(); }); }
 $("announcementFiles").addEventListener("change", async () => { for (const f of [...$("announcementFiles").files].filter(x => x.type.startsWith("image/"))) { if (announcementImages.length >= 4) { toast("Maximum 4 images.", true); break; } try { announcementImages.push(await shrink(f)); } catch(e) { toast(e.message, true); } } $("announcementFiles").value = ""; renderAnnouncementPreview(); });
 $("announcementForm").addEventListener("submit", async e => { e.preventDefault(); if (!admin) return; const text = $("announcementText").value.trim(); if (!text && !announcementImages.length) { $("announcementErr").textContent = "Écris un message ou ajoute une image."; return; } $("announcementErr").textContent = ""; $("announcementSend").disabled = true; try { await api("/api/announcements", { method:"POST", body:{ text, images:announcementImages } }); $("announcementText").value = ""; announcementImages = []; renderAnnouncementPreview(); toast("Annonce publiée"); await loadAnnouncements(); } catch(e) { $("announcementErr").textContent = e.message; } finally { $("announcementSend").disabled = false; } });
+
+
+/* Clickable mini profiles and emoji insertion */
+const CHAT_EMOJIS = ["😀","😃","😄","😁","😆","😅","😂","🤣","😊","🙂","😉","😍","🥰","😘","😎","🤔","🤨","😐","🙄","😴","😭","😡","🤯","🥳","🤝","👏","🙌","👍","👎","❤️","💜","🔥","✨","⭐","🎉","✅","❌","⚠️","💀","👀","🚀","💯","🙏","💪","🎮","💻","📌","📢"];
+let activeEmojiPicker = null;
+function closeEmojiPicker() {
+  if (activeEmojiPicker) activeEmojiPicker.remove();
+  activeEmojiPicker = null;
+}
+function insertAtCursor(field, value) {
+  if (!field) return;
+  const start = field.selectionStart ?? field.value.length;
+  const end = field.selectionEnd ?? field.value.length;
+  field.setRangeText(value, start, end, "end");
+  field.focus();
+  field.dispatchEvent(new Event("input", { bubbles: true }));
+}
+function showProfileCard(data) {
+  let profile = {};
+  try { profile = typeof data === "string" ? JSON.parse(data) : data; } catch (_) { return; }
+  const known = (typeof allUsers !== "undefined" ? allUsers : []).find(u => u.id === profile.id) || {};
+  const user = { ...known, ...profile };
+  const overlay = document.createElement("div");
+  overlay.className = "profile-pop-bg";
+  overlay.innerHTML = `<div class="profile-pop" role="dialog" aria-modal="true">
+    <div class="profile-pop-banner" style="${user.banner ? `background-image:url('${esc(user.banner)}')` : user.color ? `background:${esc(user.color)}` : ""}"></div>
+    <div class="profile-pop-content">
+      <button class="icon-btn profile-pop-close" type="button" aria-label="Fermer">×</button>
+      <img class="profile-pop-avatar" src="${esc(user.avatar || "https://cdn.discordapp.com/embed/avatars/0.png")}" alt="">
+      <div class="profile-pop-name">${esc(user.name || "Membre")}</div>
+      <div class="profile-pop-meta">${user.role ? `<span class="role ${esc(user.role)}">${esc(user.role)}</span>` : "Membre"}${user.username ? ` · @${esc(user.username)}` : ""}</div>
+      ${user.bio ? `<p class="profile-pop-meta">${esc(user.bio)}</p>` : ""}
+      ${user.id ? `<div class="profile-pop-meta">ID : ${esc(user.id)}</div>` : ""}
+    </div></div>`;
+  const close = () => overlay.remove();
+  overlay.addEventListener("click", e => { if (e.target === overlay || e.target.closest(".profile-pop-close")) close(); });
+  document.body.appendChild(overlay);
+}
+document.addEventListener("click", e => {
+  const profile = e.target.closest("[data-profile]");
+  if (profile) { showProfileCard(profile.dataset.profile); return; }
+
+  const emojiButton = e.target.closest("[data-emoji-target]");
+  if (emojiButton) {
+    const target = $(emojiButton.dataset.emojiTarget);
+    if (!target) return;
+    closeEmojiPicker();
+    const picker = document.createElement("div");
+    picker.className = "emoji-picker";
+    picker.innerHTML = CHAT_EMOJIS.map(emoji => `<button type="button" data-pick-emoji="${emoji}">${emoji}</button>`).join("");
+    document.body.appendChild(picker);
+    const rect = emojiButton.getBoundingClientRect();
+    picker.style.left = Math.max(12, Math.min(rect.left, innerWidth - picker.offsetWidth - 12)) + "px";
+    picker.style.top = Math.max(12, Math.min(rect.top - picker.offsetHeight - 8, innerHeight - picker.offsetHeight - 12)) + "px";
+    picker.addEventListener("click", ev => {
+      const chosen = ev.target.closest("[data-pick-emoji]");
+      if (!chosen) return;
+      insertAtCursor(target, chosen.dataset.pickEmoji);
+      closeEmojiPicker();
+    });
+    activeEmojiPicker = picker;
+    return;
+  }
+
+  const mentionButton = e.target.closest("[data-mention-target]");
+  if (mentionButton) {
+    const target = $(mentionButton.dataset.mentionTarget);
+    if (target) insertAtCursor(target, "@everyone ");
+    return;
+  }
+  if (!e.target.closest(".emoji-picker")) closeEmojiPicker();
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeEmojiPicker(); });
 
 async function init() {
   try {
@@ -810,6 +913,8 @@ async function init() {
   if (me.banner) $("meBan").style.backgroundImage = `url("${me.banner}")`;
   else if (me.color) $("meBan").style.background = me.color;
   admin = me.role === "owner" || me.role === "admin";
+  const canMentionEveryone = ["owner", "admin", "mod"].includes(me.role);
+  document.querySelectorAll(".staff-mention").forEach((x) => x.classList.toggle("hide", !canMentionEveryone));
   document.querySelectorAll(".adminOnly").forEach((x) => x.classList.toggle("hide", !admin));
   buildChips(); buildActs();
   show("app");
