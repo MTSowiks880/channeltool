@@ -1,5 +1,0 @@
-{
-  "rewrites": [
-    { "source": "/api/announcements", "destination": "/api/forums?__route=announcements" }
-  ]
-}
