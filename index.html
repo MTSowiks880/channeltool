@@ -93,7 +93,7 @@ const hue=s=>{let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return h};
 async function api(method,body){
   const r=await fetch("/api/logs",{method,headers:{"Content-Type":"application/json","x-mod-password":pw},body:body?JSON.stringify(body):undefined});
   const d=await r.json().catch(()=>({}));
-  if(!r.ok) throw Object.assign(new Error(d.error||"Erreur"),{status:r.status});
+  if(!r.ok) throw Object.assign(new Error(d.error||("Erreur "+r.status+" : l'API ne répond pas correctement (vérifie que le dossier api est bien dans le repo).")),{status:r.status});
   return d;
 }
 async function load(){
