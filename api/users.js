@@ -16,10 +16,19 @@ module.exports = handle(async (req, res, redis) => {
     if (!raw) return res.status(404).json({ error: "User not found." });
     const t = JSON.parse(raw);
     if (t.id === process.env.OWNER_ID) return res.status(403).json({ error: "The owner cannot be changed." });
-    const ownerOnly = action === "promote" || action === "demote";
+    const ownerOnly = ["promote", "demote", "makeDeveloper", "removeDeveloper"].includes(action);
     if (ownerOnly && me.role !== "owner") return res.status(403).json({ error: "Only the owner can change admins." });
-    if (t.role === "admin" && me.role !== "owner") return res.status(403).json({ error: "Only the owner can act on admins." });
-    const roles = { approve: "mod", kick: "banned", promote: "admin", demote: "mod" };
+    if (["admin", "developer"].includes(t.role) && me.role !== "owner") {
+      return res.status(403).json({ error: "Only the owner can act on admins or developers." });
+    }
+    const roles = {
+      approve: "mod",
+      kick: "banned",
+      promote: "admin",
+      demote: "mod",
+      makeDeveloper: "developer",
+      removeDeveloper: "admin"
+    };
     if (!roles[action]) return res.status(400).json({ error: "Unknown action." });
     t.role = roles[action];
     await redis.hset("users", t.id, JSON.stringify(t));
