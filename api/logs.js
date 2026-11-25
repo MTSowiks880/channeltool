@@ -11,8 +11,9 @@ module.exports = async (req, res) => {
       return res.status(401).json({ error: "Mot de passe incorrect." });
     }
 
-    const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+const find = (re) => { const k = Object.keys(process.env).find((k) => re.test(k)); return k ? process.env[k] : undefined; };
+const url = find(/(REST_API_URL|REDIS_REST_URL)$/);
+const token = find(/(REST_API_TOKEN|REDIS_REST_TOKEN)$/);
     if (!url || !token) {
       return res.status(500).json({ error: "La base Redis n'est pas connectée au projet (Storage → Upstash Redis), puis redéploie." });
     }
