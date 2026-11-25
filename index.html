@@ -128,119 +128,6 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
 
 
 /* staff forum */
-let forumThreads = [], forumFilter = "All", forumActive = null;
-const FORUM_CATS = ["All", "Staff", "Moderation", "Server", "Errors", "System"];
-function forumDate(value) {
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "" : d.toLocaleString([], {day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
-}
-function forumAvatar(src) { return src || "https://cdn.discordapp.com/embed/avatars/0.png"; }
-function buildForumChips() {
-  $("forumChips").innerHTML = FORUM_CATS.map((c) =>
-    `<button class="chip ${c === forumFilter ? "on" : ""}" data-fcat="${c}">${c}</button>`).join("");
-  $("forumChips").querySelectorAll("[data-fcat]").forEach((b) => b.onclick = () => {
-    forumFilter = b.dataset.fcat; buildForumChips(); renderForum();
-  });
-}
-async function loadForum() {
-  $("forumList").innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
-  $("forumCompose").classList.add("hide"); $("forumThread").classList.add("hide"); $("forumList").classList.remove("hide");
-  buildForumChips();
-  try {
-    forumThreads = await api("/api/forum");
-    renderForum();
-  } catch (e) {
-    $("forumList").innerHTML = `<div class="empty">${ico("warn")}<div>${esc(e.message)}</div></div>`;
-  }
-}
-function renderForum() {
-  const q = $("forumQ").value.trim().toLowerCase();
-  const rows = forumThreads.filter(t => (forumFilter === "All" || t.category === forumFilter) &&
-    (!q || [t.title,t.body,t.author,t.category,...(t.replies || []).map(r => r.body + " " + r.author)].join(" ").toLowerCase().includes(q)));
-  if (!rows.length) {
-    $("forumList").innerHTML = `<div class="empty">${ico("list")}<div>${forumThreads.length ? "No topics match your search." : "No topics yet. Start the first discussion."}</div></div>`;
-    return;
-  }
-  $("forumList").innerHTML = rows.map(t => `<article class="forum-topic" data-forum-id="${esc(t.id)}">
-    <img class="av" src="${esc(forumAvatar(t.avatar))}" alt="">
-    <div class="body"><h3>${esc(t.title)}</h3><div class="preview">${esc(t.body)}</div>
-      <div class="forum-meta"><b>${esc(t.author)}</b><span class="badge" style="--c:var(--acc2)">${esc(t.category)}</span>
-      <span>${(t.replies || []).length} replies</span><span>${forumDate(t.updatedAt || t.at)}</span></div>
-    </div></article>`).join("");
-  $("forumList").querySelectorAll("[data-forum-id]").forEach(el => el.onclick = () => openForumThread(el.dataset.forumId));
-}
-function showForumIndex() {
-  forumActive = null;
-  $("forumCompose").classList.add("hide");
-  $("forumThread").classList.add("hide");
-  $("forumList").classList.remove("hide");
-  $("forumQ").parentElement.parentElement.classList.remove("hide");
-  $("forumNew").classList.remove("hide");
-}
-function openForumThread(id) {
-  forumActive = forumThreads.find(t => t.id === id);
-  if (!forumActive) return;
-  $("forumList").classList.add("hide"); $("forumCompose").classList.add("hide");
-  $("forumQ").parentElement.parentElement.classList.add("hide"); $("forumNew").classList.add("hide");
-  const canDelete = admin || forumActive.uid === me.id;
-  const posts = [{author:forumActive.author,avatar:forumActive.avatar,body:forumActive.body,at:forumActive.at}, ...(forumActive.replies || [])];
-  $("forumThread").classList.remove("hide");
-  $("forumThread").innerHTML = `<button class="btn ghost sm" id="forumBack">← Back to topics</button>
-    <div class="card" style="margin-top:12px;max-width:none">
-      <div class="row" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-        <span class="badge" style="--c:var(--acc2)">${esc(forumActive.category)}</span>
-        ${canDelete ? '<button class="btn danger sm" id="forumDelete">Delete topic</button>' : ""}
-      </div>
-      <div class="forum-thread-title">${esc(forumActive.title)}</div>
-      <div class="mut" style="font-size:12px">Started by ${esc(forumActive.author)} · ${forumDate(forumActive.at)}</div>
-      ${posts.map(p => `<div class="forum-post"><img class="av" src="${esc(forumAvatar(p.avatar))}" alt=""><div class="content">
-        <div class="head"><b>${esc(p.author)}</b><span>${forumDate(p.at)}</span></div><p>${esc(p.body)}</p></div></div>`).join("")}
-      <form id="forumReplyForm" style="margin-top:18px">
-        <div class="field"><label for="forumReply">Write a reply</label><textarea id="forumReply" maxlength="3000" placeholder="Add a comment…" required></textarea></div>
-        <div class="err" id="forumReplyErr"></div>
-        <div class="forum-actions"><button class="btn" id="forumReplyBtn">Send reply</button></div>
-      </form>
-    </div>`;
-  $("forumBack").onclick = showForumIndex;
-  if ($("forumDelete")) $("forumDelete").onclick = deleteForumThread;
-  $("forumReplyForm").onsubmit = async (e) => {
-    e.preventDefault();
-    $("forumReplyBtn").disabled = true;
-    try {
-      const updated = await api("/api/forum", {method:"POST",body:{id:forumActive.id,body:$("forumReply").value}});
-      forumThreads = forumThreads.map(t => t.id === updated.id ? updated : t);
-      toast("Reply added"); openForumThread(updated.id);
-    } catch (err) { $("forumReplyErr").textContent = err.message; }
-    finally { if ($("forumReplyBtn")) $("forumReplyBtn").disabled = false; }
-  };
-}
-async function deleteForumThread() {
-  if (!forumActive || !(await confirmBox("Delete topic?", "This will also remove all replies.", "Delete"))) return;
-  try {
-    await api("/api/forum?id=" + encodeURIComponent(forumActive.id), {method:"DELETE"});
-    forumThreads = forumThreads.filter(t => t.id !== forumActive.id);
-    toast("Topic deleted"); showForumIndex(); renderForum();
-  } catch (e) { toast(e.message, true); }
-}
-$("forumNew").onclick = () => {
-  $("forumList").classList.add("hide"); $("forumThread").classList.add("hide");
-  $("forumQ").parentElement.parentElement.classList.add("hide"); $("forumNew").classList.add("hide");
-  $("forumCompose").classList.remove("hide"); $("forumForm").reset(); $("forumErr").textContent = "";
-};
-$("forumCancel").onclick = showForumIndex;
-$("forumQ").addEventListener("input", renderForum);
-$("forumList").addEventListener("click", () => {});
-$("forumForm").onsubmit = async (e) => {
-  e.preventDefault(); $("forumPublish").disabled = true; $("forumErr").textContent = "";
-  try {
-    const created = await api("/api/forum", {method:"POST",body:{
-      title:$("forumTitle").value,category:$("forumCategory").value,body:$("forumBody").value
-    }});
-    forumThreads.unshift(created); toast("Topic published"); showForumIndex(); renderForum();
-  } catch (err) { $("forumErr").textContent = err.message; }
-  finally { $("forumPublish").disabled = false; }
-};
-
 /* logs */
 .day{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin:22px 4px 10px;display:flex;align-items:center;gap:10px}
 .day::after{content:"";flex:1;height:1px;background:var(--line)}
@@ -1101,6 +988,122 @@ $("reviewList").addEventListener("click", async (e) => {
     await loadSubs();
   } catch (err) { toast(err.message, true); }
 });
+
+
+/* Staff Forum behavior */
+let forumThreads = [], forumFilter = "All", forumActive = null;
+const FORUM_CATS = ["All", "Staff", "Moderation", "Server", "Errors", "System"];
+function forumDate(value) {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleString([], {day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+}
+function forumAvatar(src) { return src || "https://cdn.discordapp.com/embed/avatars/0.png"; }
+function buildForumChips() {
+  $("forumChips").innerHTML = FORUM_CATS.map((c) =>
+    `<button class="chip ${c === forumFilter ? "on" : ""}" data-fcat="${c}">${c}</button>`).join("");
+  $("forumChips").querySelectorAll("[data-fcat]").forEach((b) => b.onclick = () => {
+    forumFilter = b.dataset.fcat; buildForumChips(); renderForum();
+  });
+}
+async function loadForum() {
+  $("forumList").innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
+  $("forumCompose").classList.add("hide"); $("forumThread").classList.add("hide"); $("forumList").classList.remove("hide");
+  buildForumChips();
+  try {
+    forumThreads = await api("/api/forum");
+    renderForum();
+  } catch (e) {
+    $("forumList").innerHTML = `<div class="empty">${ico("warn")}<div>${esc(e.message)}</div></div>`;
+  }
+}
+function renderForum() {
+  const q = $("forumQ").value.trim().toLowerCase();
+  const rows = forumThreads.filter(t => (forumFilter === "All" || t.category === forumFilter) &&
+    (!q || [t.title,t.body,t.author,t.category,...(t.replies || []).map(r => r.body + " " + r.author)].join(" ").toLowerCase().includes(q)));
+  if (!rows.length) {
+    $("forumList").innerHTML = `<div class="empty">${ico("list")}<div>${forumThreads.length ? "No topics match your search." : "No topics yet. Start the first discussion."}</div></div>`;
+    return;
+  }
+  $("forumList").innerHTML = rows.map(t => `<article class="forum-topic" data-forum-id="${esc(t.id)}">
+    <img class="av" src="${esc(forumAvatar(t.avatar))}" alt="">
+    <div class="body"><h3>${esc(t.title)}</h3><div class="preview">${esc(t.body)}</div>
+      <div class="forum-meta"><b>${esc(t.author)}</b><span class="badge" style="--c:var(--acc2)">${esc(t.category)}</span>
+      <span>${(t.replies || []).length} replies</span><span>${forumDate(t.updatedAt || t.at)}</span></div>
+    </div></article>`).join("");
+  $("forumList").querySelectorAll("[data-forum-id]").forEach(el => el.onclick = () => openForumThread(el.dataset.forumId));
+}
+function showForumIndex() {
+  forumActive = null;
+  $("forumCompose").classList.add("hide");
+  $("forumThread").classList.add("hide");
+  $("forumList").classList.remove("hide");
+  $("forumQ").parentElement.parentElement.classList.remove("hide");
+  $("forumNew").classList.remove("hide");
+}
+function openForumThread(id) {
+  forumActive = forumThreads.find(t => t.id === id);
+  if (!forumActive) return;
+  $("forumList").classList.add("hide"); $("forumCompose").classList.add("hide");
+  $("forumQ").parentElement.parentElement.classList.add("hide"); $("forumNew").classList.add("hide");
+  const canDelete = admin || forumActive.uid === me.id;
+  const posts = [{author:forumActive.author,avatar:forumActive.avatar,body:forumActive.body,at:forumActive.at}, ...(forumActive.replies || [])];
+  $("forumThread").classList.remove("hide");
+  $("forumThread").innerHTML = `<button class="btn ghost sm" id="forumBack">← Back to topics</button>
+    <div class="card" style="margin-top:12px;max-width:none">
+      <div class="row" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="badge" style="--c:var(--acc2)">${esc(forumActive.category)}</span>
+        ${canDelete ? '<button class="btn danger sm" id="forumDelete">Delete topic</button>' : ""}
+      </div>
+      <div class="forum-thread-title">${esc(forumActive.title)}</div>
+      <div class="mut" style="font-size:12px">Started by ${esc(forumActive.author)} · ${forumDate(forumActive.at)}</div>
+      ${posts.map(p => `<div class="forum-post"><img class="av" src="${esc(forumAvatar(p.avatar))}" alt=""><div class="content">
+        <div class="head"><b>${esc(p.author)}</b><span>${forumDate(p.at)}</span></div><p>${esc(p.body)}</p></div></div>`).join("")}
+      <form id="forumReplyForm" style="margin-top:18px">
+        <div class="field"><label for="forumReply">Write a reply</label><textarea id="forumReply" maxlength="3000" placeholder="Add a comment…" required></textarea></div>
+        <div class="err" id="forumReplyErr"></div>
+        <div class="forum-actions"><button class="btn" id="forumReplyBtn">Send reply</button></div>
+      </form>
+    </div>`;
+  $("forumBack").onclick = showForumIndex;
+  if ($("forumDelete")) $("forumDelete").onclick = deleteForumThread;
+  $("forumReplyForm").onsubmit = async (e) => {
+    e.preventDefault();
+    $("forumReplyBtn").disabled = true;
+    try {
+      const updated = await api("/api/forum", {method:"POST",body:{id:forumActive.id,body:$("forumReply").value}});
+      forumThreads = forumThreads.map(t => t.id === updated.id ? updated : t);
+      toast("Reply added"); openForumThread(updated.id);
+    } catch (err) { $("forumReplyErr").textContent = err.message; }
+    finally { if ($("forumReplyBtn")) $("forumReplyBtn").disabled = false; }
+  };
+}
+async function deleteForumThread() {
+  if (!forumActive || !(await confirmBox("Delete topic?", "This will also remove all replies.", "Delete"))) return;
+  try {
+    await api("/api/forum?id=" + encodeURIComponent(forumActive.id), {method:"DELETE"});
+    forumThreads = forumThreads.filter(t => t.id !== forumActive.id);
+    toast("Topic deleted"); showForumIndex(); renderForum();
+  } catch (e) { toast(e.message, true); }
+}
+$("forumNew").onclick = () => {
+  $("forumList").classList.add("hide"); $("forumThread").classList.add("hide");
+  $("forumQ").parentElement.parentElement.classList.add("hide"); $("forumNew").classList.add("hide");
+  $("forumCompose").classList.remove("hide"); $("forumForm").reset(); $("forumErr").textContent = "";
+};
+$("forumCancel").onclick = showForumIndex;
+$("forumQ").addEventListener("input", renderForum);
+$("forumList").addEventListener("click", () => {});
+$("forumForm").onsubmit = async (e) => {
+  e.preventDefault(); $("forumPublish").disabled = true; $("forumErr").textContent = "";
+  try {
+    const created = await api("/api/forum", {method:"POST",body:{
+      title:$("forumTitle").value,category:$("forumCategory").value,body:$("forumBody").value
+    }});
+    forumThreads.unshift(created); toast("Topic published"); showForumIndex(); renderForum();
+  } catch (err) { $("forumErr").textContent = err.message; }
+  finally { $("forumPublish").disabled = false; }
+};
+
 
 init();
 </script>
