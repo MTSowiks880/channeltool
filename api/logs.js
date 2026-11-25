@@ -1,8 +1,9 @@
-const { Redis } = require("@upstash/redis");
+const Redis = require("ioredis");
 
 const clip = (v, n) => String(v || "").trim().slice(0, n);
 
 module.exports = async (req, res) => {
+  let redis;
   try {
     if (!process.env.MOD_PASSWORD) {
       return res.status(500).json({ error: "MOD_PASSWORD n'est pas défini dans Vercel (ou pas redéployé)." });
@@ -10,18 +11,15 @@ module.exports = async (req, res) => {
     if (req.headers["x-mod-password"] !== process.env.MOD_PASSWORD) {
       return res.status(401).json({ error: "Mot de passe incorrect." });
     }
-
-const find = (re) => { const k = Object.keys(process.env).find((k) => re.test(k)); return k ? process.env[k] : undefined; };
-const url = find(/(REST_API_URL|REDIS_REST_URL)$/);
-const token = find(/(REST_API_TOKEN|REDIS_REST_TOKEN)$/);
-    if (!url || !token) {
-      return res.status(500).json({ error: "La base Redis n'est pas connectée au projet (Storage → Upstash Redis), puis redéploie." });
+    if (!process.env.REDIS_URL) {
+      return res.status(500).json({ error: "REDIS_URL est absent : connecte la base Redis au projet, puis redéploie." });
     }
-    const redis = new Redis({ url, token });
+
+    redis = new Redis(process.env.REDIS_URL, { maxRetriesPerRequest: 2, connectTimeout: 8000 });
 
     if (req.method === "GET") {
-      const logs = await redis.lrange("logs", 0, 199);
-      return res.status(200).json(logs);
+      const raw = await redis.lrange("logs", 0, 199);
+      return res.status(200).json(raw.map((r) => JSON.parse(r)));
     }
     if (req.method === "POST") {
       const b = req.body || {};
@@ -45,5 +43,7 @@ const token = find(/(REST_API_TOKEN|REDIS_REST_TOKEN)$/);
     return res.status(405).json({ error: "Méthode non autorisée." });
   } catch (e) {
     return res.status(500).json({ error: "Erreur serveur : " + e.message });
+  } finally {
+    if (redis) redis.disconnect();
   }
 };
