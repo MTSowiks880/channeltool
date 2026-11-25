@@ -204,6 +204,33 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
   box-shadow:var(--sh);font-weight:500;animation:pop .25s;max-width:340px}
 .toast.bad{border-left-color:var(--ban)}
 
+
+/* quizzes */
+.qz{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:10px;animation:pop .3s ease both}
+.qz h3{margin:0;font-size:16px}
+.qz .meta{font-size:12.5px;color:var(--dim)}
+.qz .row,.sub .row{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;align-items:center}
+.qa{margin-bottom:20px}
+.qa .qt{font-weight:600;margin-bottom:8px}
+.opt{display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;cursor:pointer;font-weight:500;background:var(--bg2)}
+.opt input{width:auto;margin:0}
+.opt:has(input:checked){border-color:var(--acc);background:rgba(124,108,255,.1)}
+.bq{border:1px solid var(--line);background:var(--bg2);border-radius:12px;padding:14px;margin-bottom:12px}
+.bq .bqh{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.bq .bqh b{flex:1}
+.bq .bqh select{width:auto}
+.bopt{display:flex;align-items:center;gap:8px;margin-top:8px}
+.bopt input[type=radio]{width:auto;margin:0}
+.sub{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px;animation:pop .3s ease both}
+.sub .h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sub .av{width:38px;height:38px;border-radius:50%}
+.ans{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px}
+.ans .aq{font-weight:600;font-size:13.5px;margin-bottom:4px}
+.ans .good{color:#5ee6b0}.ans .bad{color:#ff7d93}
+.sub details summary{cursor:pointer;color:var(--mut);font-weight:600;margin-top:12px}
+.sub textarea{min-height:64px;margin-top:12px}
+.fb{margin-top:10px;color:var(--mut);font-size:13px}
+
 /* mobile */
 .mnav{display:none}
 @media(max-width:900px){.stats{grid-template-columns:repeat(2,1fr)}}
@@ -246,6 +273,8 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
     <symbol id="i-ban" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></symbol>
     <symbol id="i-unban" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="M22 4 12 14l-3-3"/></symbol>
     <symbol id="i-dots" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></symbol>
+    <symbol id="i-quiz" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
     <symbol id="i-discord" viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.6 1.3a18.3 18.3 0 0 0-5.5 0L8.6 3a19.7 19.7 0 0 0-4.9 1.5C.6 9.1-.3 13.6.1 18.1a19.9 19.9 0 0 0 6 3l1.3-2a12.9 12.9 0 0 1-2-1l.5-.4a14.2 14.2 0 0 0 12.2 0l.5.4c-.6.4-1.3.7-2 1l1.3 2a19.8 19.8 0 0 0 6-3c.5-5.2-.8-9.7-3.6-13.7zM8 15.3c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4zm8 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4z"/></symbol>
   </defs>
 </svg>
@@ -278,6 +307,8 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
     <div class="brand"><div class="logo"><svg><use href="#i-shield"/></svg></div>Mod Panel</div>
     <button class="nav on" data-view="logs"><svg><use href="#i-list"/></svg>Logs</button>
     <button class="nav" data-view="new"><svg><use href="#i-plus"/></svg>New log</button>
+    <button class="nav" data-view="quizzes"><svg><use href="#i-quiz"/></svg>Quizzes</button>
+    <button class="nav adminOnly hide" data-view="review"><svg><use href="#i-check"/></svg>Review<span class="count revCount hide"></span></button>
     <button class="nav adminOnly hide" data-view="members"><svg><use href="#i-users"/></svg>Members<span class="count pendCount hide"></span></button>
     <div class="side-sp"></div>
     <div class="me">
@@ -339,6 +370,54 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
       </form>
     </section>
 
+
+    <!-- Quizzes list -->
+    <section id="v-quizzes" class="hide">
+      <div class="top">
+        <div><h2>Quizzes</h2><p class="mut">Answer the questions, an admin reviews your answers.</p></div>
+        <button class="btn adminOnly hide" id="newQuizBtn"><svg><use href="#i-plus"/></svg>New quiz</button>
+      </div>
+      <div class="members" id="quizList"></div>
+    </section>
+
+    <!-- Take quiz -->
+    <section id="v-take" class="hide">
+      <div class="top"><div><h2 id="takeTitle"></h2><p class="mut" id="takeDesc"></p></div></div>
+      <form class="card" id="takeForm">
+        <div id="takeQs"></div>
+        <div class="err" id="takeErr"></div>
+        <div class="form-foot">
+          <button type="button" class="btn ghost" data-go="quizzes">Cancel</button>
+          <button type="submit" class="btn" id="takeBtn">Submit answers</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Quiz builder (admins) -->
+    <section id="v-builder" class="hide">
+      <div class="top"><div><h2 id="bHead">New quiz</h2><p class="mut">Add your questions. Members answer, you review.</p></div></div>
+      <div class="card">
+        <div class="field"><label for="bTitle">Title</label><input id="bTitle" maxlength="100" placeholder="e.g. Mod application" autocomplete="off"></div>
+        <div class="field"><label for="bDesc">Description <span class="dim">(optional)</span></label><input id="bDesc" maxlength="500" autocomplete="off"></div>
+        <div class="field" id="bPassWrap"><label for="bPass">Pass mark for multiple-choice questions (%)</label><input id="bPass" type="number" min="0" max="100" value="70"></div>
+        <label>Questions</label>
+        <div id="bqs"></div>
+        <button type="button" class="btn ghost sm" id="addQ"><svg><use href="#i-plus"/></svg>Add question</button>
+        <div class="err" id="bErr"></div>
+        <div class="form-foot">
+          <button type="button" class="btn ghost" data-go="quizzes">Cancel</button>
+          <button type="button" class="btn" id="bSave">Save quiz</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Review (admins) -->
+    <section id="v-review" class="hide">
+      <div class="top"><div><h2>Review</h2><p class="mut">Answers submitted by the team, waiting for your verdict.</p></div></div>
+      <div class="tabs" id="rtabs"></div>
+      <div id="reviewList"></div>
+    </section>
+
     <!-- Members view -->
     <section id="v-members" class="hide">
       <div class="top"><div><h2>Members</h2><p class="mut">Approve new accounts and manage roles.</p></div></div>
@@ -350,6 +429,8 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
   <nav class="mnav">
     <button class="nav on" data-view="logs"><svg><use href="#i-list"/></svg>Logs</button>
     <button class="nav" data-view="new"><svg><use href="#i-plus"/></svg>New</button>
+    <button class="nav" data-view="quizzes"><svg><use href="#i-quiz"/></svg>Quiz</button>
+    <button class="nav adminOnly hide" data-view="review"><svg><use href="#i-check"/></svg>Review<span class="count revCount hide"></span></button>
     <button class="nav adminOnly hide" data-view="members"><svg><use href="#i-users"/></svg>Members<span class="count pendCount hide"></span></button>
     <a class="nav" href="/api/logout"><svg><use href="#i-out"/></svg>Sign out</a>
   </nav>
@@ -410,8 +491,11 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.q
 
 /* navigation */
 function go(view) {
-  ["logs", "new", "members"].forEach((v) => $("v-" + v).classList.toggle("hide", v !== view));
-  document.querySelectorAll(".nav[data-view]").forEach((n) => n.classList.toggle("on", n.dataset.view === view));
+  ["logs", "new", "members", "quizzes", "take", "builder", "review"].forEach((v) => $("v-" + v).classList.toggle("hide", v !== view));
+  const navView = ["take", "builder"].includes(view) ? "quizzes" : view;
+  document.querySelectorAll(".nav[data-view]").forEach((n) => n.classList.toggle("on", n.dataset.view === navView));
+  if (view === "quizzes") loadQuizzes();
+  if (view === "review") loadSubs();
   if (view === "logs") loadLogs();
   if (view === "members") loadUsers();
   window.scrollTo({ top: 0 });
@@ -447,7 +531,7 @@ async function init() {
   buildChips(); buildActs();
   show("app");
   loadLogs();
-  if (admin) loadUsers(true);
+  if (admin) { loadUsers(true); loadSubs(true); }
 }
 
 /* logs */
@@ -651,6 +735,206 @@ $("users").addEventListener("click", async (e) => {
     await api("/api/users", { method: "POST", body: { id: u, action: a } });
     toast({ approve: "Approved " + n, kick: "Removed " + n, promote: n + " is now admin", demote: n + " is no longer admin" }[a]);
     loadUsers();
+  } catch (err) { toast(err.message, true); }
+});
+
+/* quizzes */
+let allQuizzes = [], allSubs = [], bq = null, taking = null, revTab = "pending";
+const STAT = { passed: ["Passed", "var(--unban)"], failed: ["Not passed", "var(--ban)"], pending: ["Awaiting review", "var(--warn)"] };
+const statBadge = (s) => { const [t, c] = STAT[s] || STAT.pending; return `<span class="badge" style="--c:${c}">${t}</span>`; };
+const mySub = (qid) => allSubs.filter((s) => s.uid === me.id && s.quizId === qid).sort((a, b) => b.at.localeCompare(a.at))[0];
+const fmt = (d) => new Date(d).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+function updateRevCount() {
+  if (!admin) return;
+  const p = allSubs.filter((s) => s.status === "pending").length;
+  document.querySelectorAll(".revCount").forEach((x) => { x.textContent = p; x.classList.toggle("hide", !p); });
+}
+
+async function loadQuizzes() {
+  if (!allQuizzes.length) $("quizList").innerHTML = '<div class="skel"></div><div class="skel"></div>';
+  try {
+    [allQuizzes, allSubs] = await Promise.all([api("/api/quizzes"), api("/api/submissions")]);
+    renderQuizzes(); updateRevCount();
+  } catch (e) { $("quizList").innerHTML = `<div class="empty" style="grid-column:1/-1">${ico("warn")}<div>${esc(e.message)}</div></div>`; }
+}
+function renderQuizzes() {
+  if (!allQuizzes.length) {
+    $("quizList").innerHTML = `<div class="empty" style="grid-column:1/-1">${ico("quiz")}<div>${admin ? "No quiz yet — create the first one." : "No quiz available yet."}</div></div>`;
+    return;
+  }
+  $("quizList").innerHTML = allQuizzes.map((q, i) => {
+    const s = mySub(q.id);
+    let btn;
+    if (!s || s.status === "failed") btn = `<button class="btn sm" data-take="${esc(q.id)}">${s ? "Retake" : "Start"}</button>`;
+    else if (s.status === "pending") btn = `<button class="btn sm ghost" disabled>Awaiting review</button>`;
+    else btn = `<button class="btn sm ok" disabled>Completed</button>`;
+    const adm = admin ? `<button class="btn sm ghost" data-edit="${esc(q.id)}">Edit</button><button class="btn sm danger" data-delq="${esc(q.id)}" data-n="${esc(q.title)}">Delete</button>` : "";
+    const res = s ? `<div class="row">${statBadge(s.status)}${s.pct != null ? `<span class="mut">${s.pct}% on multiple choice</span>` : ""}</div>${s.feedback ? `<div class="fb">“${esc(s.feedback)}”</div>` : ""}` : "";
+    return `<div class="qz" style="animation-delay:${Math.min(i, 10) * 30}ms">
+      <h3>${esc(q.title)}</h3>
+      ${q.description ? `<div class="mut">${esc(q.description)}</div>` : ""}
+      <div class="meta">${q.questions.length} question${q.questions.length > 1 ? "s" : ""}</div>
+      ${res}
+      <div class="row">${btn}${adm}</div>
+    </div>`;
+  }).join("");
+}
+$("quizList").addEventListener("click", async (e) => {
+  const t = e.target.closest("[data-take]"), ed = e.target.closest("[data-edit]"), dq = e.target.closest("[data-delq]");
+  if (t) return startTake(t.dataset.take);
+  if (ed) return editQuiz(ed.dataset.edit);
+  if (dq) {
+    if (!(await confirmBox("Delete “" + dq.dataset.n + "”?", "Existing submissions are kept in Review.", "Delete"))) return;
+    try { await api("/api/quizzes?id=" + encodeURIComponent(dq.dataset.delq), { method: "DELETE" }); toast("Quiz deleted"); loadQuizzes(); }
+    catch (err) { toast(err.message, true); }
+  }
+});
+
+/* answering */
+function startTake(id) {
+  taking = allQuizzes.find((q) => q.id === id);
+  if (!taking) return;
+  $("takeTitle").textContent = taking.title;
+  $("takeDesc").textContent = taking.description || "";
+  $("takeErr").textContent = "";
+  $("takeQs").innerHTML = taking.questions.map((q, i) => `<div class="qa"><div class="qt">${i + 1}. ${esc(q.q)}</div>` +
+    (q.type === "choice"
+      ? q.options.map((o, j) => `<label class="opt"><input type="radio" name="q${i}" value="${j}">${esc(o)}</label>`).join("")
+      : `<textarea name="q${i}" maxlength="2000" placeholder="Your answer…"></textarea>`) + `</div>`).join("");
+  go("take");
+}
+$("takeForm").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  $("takeErr").textContent = "";
+  const answers = taking.questions.map((q, i) => {
+    if (q.type === "choice") { const c = document.querySelector(`input[name="q${i}"]:checked`); return c ? +c.value : null; }
+    return document.querySelector(`textarea[name="q${i}"]`).value;
+  });
+  const btn = $("takeBtn"); btn.disabled = true; btn.textContent = "Sending…";
+  try {
+    const r = await api("/api/submissions", { method: "POST", body: { quizId: taking.id, answers } });
+    toast(r.status === "pending" ? "Sent! An admin will review your answers." : r.status === "passed" ? "Passed (" + r.pct + "%)" : "Not passed (" + r.pct + "%)", r.status === "failed");
+    go("quizzes");
+  } catch (e) { $("takeErr").textContent = e.message; }
+  finally { btn.disabled = false; btn.textContent = "Submit answers"; }
+});
+
+/* builder */
+const blankQ = () => ({ type: "text", q: "", options: ["", ""], correct: 0 });
+$("newQuizBtn").onclick = () => { bq = { title: "", description: "", passScore: 70, questions: [blankQ()] }; openBuilder(); };
+function editQuiz(id) {
+  const q = allQuizzes.find((x) => x.id === id);
+  if (!q) return;
+  bq = JSON.parse(JSON.stringify(q));
+  bq.questions.forEach((x) => { if (x.type === "text") { x.options = ["", ""]; x.correct = 0; } });
+  openBuilder();
+}
+function openBuilder() {
+  $("bHead").textContent = bq.id ? "Edit quiz" : "New quiz";
+  $("bTitle").value = bq.title; $("bDesc").value = bq.description || ""; $("bPass").value = bq.passScore;
+  $("bErr").textContent = "";
+  renderBuilder(); go("builder");
+}
+function renderBuilder() {
+  $("bPassWrap").classList.toggle("hide", !bq.questions.some((q) => q.type === "choice"));
+  $("bqs").innerHTML = bq.questions.map((q, i) => `<div class="bq" data-i="${i}">
+    <div class="bqh"><b>Question ${i + 1}</b>
+      <select data-f="type"><option value="text" ${q.type === "text" ? "selected" : ""}>Written answer</option><option value="choice" ${q.type === "choice" ? "selected" : ""}>Multiple choice</option></select>
+      ${bq.questions.length > 1 ? `<button type="button" class="icon-btn" data-rmq title="Remove">${ico("trash")}</button>` : ""}</div>
+    <input data-f="q" maxlength="500" placeholder="Type your question…" value="${esc(q.q)}">
+    ${q.type === "choice" ? q.options.map((o, j) => `<div class="bopt"><input type="radio" name="c${i}" data-f="correct" data-j="${j}" ${q.correct === j ? "checked" : ""} title="Correct answer">
+      <input data-f="opt" data-j="${j}" maxlength="200" placeholder="Option ${j + 1}" value="${esc(o)}">
+      ${q.options.length > 2 ? `<button type="button" class="icon-btn" data-rmo="${j}">×</button>` : ""}</div>`).join("") +
+      (q.options.length < 6 ? `<button type="button" class="btn ghost sm" data-addo style="margin-top:10px">Add option</button>` : "") +
+      `<div class="dim" style="font-size:12px;margin-top:8px">Select the radio button next to the correct answer.</div>` : ""}
+  </div>`).join("");
+}
+$("bTitle").oninput = () => (bq.title = $("bTitle").value);
+$("bDesc").oninput = () => (bq.description = $("bDesc").value);
+$("bPass").oninput = () => (bq.passScore = +$("bPass").value);
+$("addQ").onclick = () => { if (bq.questions.length >= 30) return toast("Max 30 questions", true); bq.questions.push(blankQ()); renderBuilder(); };
+const bqOf = (el) => bq.questions[+el.closest(".bq").dataset.i];
+$("bqs").addEventListener("input", (e) => {
+  const f = e.target.dataset.f; if (!f) return;
+  const q = bqOf(e.target);
+  if (f === "q") q.q = e.target.value;
+  if (f === "opt") q.options[+e.target.dataset.j] = e.target.value;
+});
+$("bqs").addEventListener("change", (e) => {
+  const f = e.target.dataset.f; if (!f) return;
+  const q = bqOf(e.target);
+  if (f === "type") { q.type = e.target.value; renderBuilder(); }
+  if (f === "correct") q.correct = +e.target.dataset.j;
+});
+$("bqs").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  const i = +b.closest(".bq").dataset.i, q = bq.questions[i];
+  if (b.hasAttribute("data-rmq")) { bq.questions.splice(i, 1); renderBuilder(); }
+  if (b.hasAttribute("data-addo")) { q.options.push(""); renderBuilder(); }
+  if (b.dataset.rmo !== undefined) { const j = +b.dataset.rmo; q.options.splice(j, 1); if (q.correct >= q.options.length || q.correct === j) q.correct = 0; renderBuilder(); }
+});
+$("bSave").onclick = async () => {
+  $("bErr").textContent = "";
+  const body = { id: bq.id, title: bq.title, description: bq.description, passScore: bq.passScore,
+    questions: bq.questions.map((q) => q.type === "text" ? { type: "text", q: q.q } : { type: "choice", q: q.q, options: q.options, correct: q.correct }) };
+  $("bSave").disabled = true;
+  try { await api("/api/quizzes", { method: "POST", body }); toast("Quiz saved"); go("quizzes"); }
+  catch (e) { $("bErr").textContent = e.message; }
+  finally { $("bSave").disabled = false; }
+};
+
+/* review */
+async function loadSubs(silent) {
+  if (!silent) $("reviewList").innerHTML = '<div class="skel"></div><div class="skel"></div>';
+  try { allSubs = await api("/api/submissions"); updateRevCount(); if (!silent) renderReview(); }
+  catch (e) { if (!silent) $("reviewList").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+function renderReview() {
+  const n = (t) => allSubs.filter((s) => (t === "pending") === (s.status === "pending")).length;
+  $("rtabs").innerHTML = [["pending", "To review"], ["done", "Reviewed"]].map(([k, l]) => `<button class="tab ${k === revTab ? "on" : ""}" data-t="${k}">${l} <span class="dim">${n(k)}</span></button>`).join("");
+  $("rtabs").querySelectorAll(".tab").forEach((b) => b.onclick = () => { revTab = b.dataset.t; renderReview(); });
+  const list = allSubs.filter((s) => (revTab === "pending") === (s.status === "pending"));
+  if (!list.length) { $("reviewList").innerHTML = `<div class="empty">${ico("check")}<div>${revTab === "pending" ? "Nothing to review — all caught up." : "No reviewed submissions yet."}</div></div>`; return; }
+  $("reviewList").innerHTML = list.map(renderSub).join("");
+}
+function renderSub(s, i) {
+  const answers = (s.questions || []).map((q, k) => {
+    const a = s.answers[k];
+    if (q.type === "choice") {
+      const ok = a === q.correct;
+      return `<div class="ans"><div class="aq">${k + 1}. ${esc(q.q)}</div><div class="${ok ? "good" : "bad"}">${ok ? "✓" : "✗"} ${esc(q.options[a] ?? "—")}</div>${ok ? "" : `<div class="mut">Correct answer: ${esc(q.options[q.correct])}</div>`}</div>`;
+    }
+    return `<div class="ans"><div class="aq">${k + 1}. ${esc(q.q)}</div><div class="note" style="margin-top:2px">${esc(a)}</div></div>`;
+  }).join("");
+  const pend = s.status === "pending";
+  const info = !pend ? `<div class="fb">${s.auto ? "Graded automatically" : "Reviewed by " + esc(s.reviewerName || "?") + (s.reviewedAt ? " · " + fmt(s.reviewedAt) : "")}</div>` : "";
+  return `<div class="sub" data-id="${esc(s.id)}" style="animation-delay:${Math.min(i, 10) * 25}ms">
+    <div class="h"><img class="av" src="${esc(s.avatar || "https://cdn.discordapp.com/embed/avatars/0.png")}" alt="">
+      <div><b>${esc(s.name)}</b> <span class="mut">answered</span> <b>${esc(s.quizTitle)}</b><div class="time dim" style="font-size:12.5px">${fmt(s.at)}${s.pct != null ? " · " + s.pct + "% on multiple choice" : ""}</div></div>
+      <span style="margin-left:auto">${statBadge(s.status)}</span></div>
+    <details ${pend ? "open" : ""}><summary>Answers</summary>${answers}</details>
+    ${info}
+    <textarea data-fb maxlength="1000" placeholder="Feedback for the member (optional)">${esc(s.feedback || "")}</textarea>
+    <div class="row" style="margin-top:10px">
+      <button class="btn sm ok" data-rv="passed">${pend ? "Pass" : "Set as passed"}</button>
+      <button class="btn sm danger" data-rv="failed">${pend ? "Fail" : "Set as not passed"}</button>
+      <button class="btn sm ghost" data-delsub style="margin-left:auto">Delete</button>
+    </div>
+  </div>`;
+}
+$("reviewList").addEventListener("click", async (e) => {
+  const card = e.target.closest(".sub"); if (!card) return;
+  const id = card.dataset.id, rv = e.target.closest("[data-rv]");
+  try {
+    if (rv) {
+      await api("/api/submissions", { method: "PUT", body: { id, verdict: rv.dataset.rv, feedback: card.querySelector("[data-fb]").value } });
+      toast("Verdict saved");
+    } else if (e.target.closest("[data-delsub]")) {
+      if (!(await confirmBox("Delete this submission?", "This can't be undone."))) return;
+      await api("/api/submissions?id=" + encodeURIComponent(id), { method: "DELETE" });
+      toast("Submission deleted");
+    } else return;
+    await loadSubs();
   } catch (err) { toast(err.message, true); }
 });
 
