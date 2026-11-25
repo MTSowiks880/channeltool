@@ -2,168 +2,238 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mod Logs</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mod area</title>
 <style>
-:root{--bg:#e8edf5;--card:#fff;--ink:#16202f;--mute:#5d6b80;--line:#d3dbe8;--accent:#2f5bff;--accent-ink:#fff;--ok:#1f8a5b}
-@media (prefers-color-scheme:dark){:root{--bg:#121a28;--card:#1b2536;--ink:#e8edf6;--mute:#93a1b8;--line:#2c3950;--accent:#6f8dff;--accent-ink:#0f1626;--ok:#52c796}}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Instrument Sans",system-ui,sans-serif}
-h1,h2{font-family:"Bricolage Grotesque",system-ui,sans-serif;margin:0;letter-spacing:-.02em}
-.wrap{max-width:760px;margin:0 auto;padding:40px 20px 80px}
-header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:28px}
-h1{font-size:clamp(2rem,6vw,3.2rem);font-weight:800;line-height:1}
-.sub{color:var(--mute);margin:8px 0 0}
-button,input,select,textarea{font:inherit;color:inherit}
-.btn{background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;padding:12px 20px;font-weight:600;cursor:pointer}
-.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
-:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-input,select,textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-label{display:block;font-weight:600;font-size:.9rem;margin:14px 0 6px}
-.search{margin-bottom:24px}
-.feed{position:relative;padding-left:28px}
-.feed:before{content:"";position:absolute;left:11px;top:6px;bottom:6px;width:2px;background:var(--line)}
-.log{position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:18px}
-.log:before{content:"";position:absolute;left:-23px;top:24px;width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--bg)}
-.top{display:flex;gap:12px;align-items:center}
-.av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#fff;font-family:"Bricolage Grotesque",sans-serif;flex:none}
-.who{font-weight:600}.when{color:var(--mute);font-size:.85rem}
-.tag{margin-left:auto;font-size:.8rem;font-weight:600;padding:4px 10px;border-radius:99px;background:var(--bg);border:1px solid var(--line)}
-.log h2{font-size:1.25rem;margin:14px 0 4px}
-.note{margin:0;white-space:pre-wrap;color:var(--mute)}
-.shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:14px}
-.shots img{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:10px;border:1px solid var(--line);cursor:zoom-in}
-.empty,.err{text-align:center;color:var(--mute);padding:40px 0}.err{color:#d6454b}
-dialog{border:0;border-radius:18px;padding:24px;width:min(560px,94vw);background:var(--card);color:var(--ink)}
-dialog::backdrop{background:rgba(10,15,25,.6)}
-.drop{border:2px dashed var(--line);border-radius:12px;padding:18px;text-align:center;color:var(--mute);cursor:pointer}
-.drop.over{border-color:var(--accent);color:var(--accent)}
-.prev{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.prev div{position:relative}.prev img{width:84px;height:60px;object-fit:cover;border-radius:8px}
-.prev button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:0;background:#d6454b;color:#fff;cursor:pointer}
-.row{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
-#lock{max-width:380px;margin:18vh auto;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:28px}
-#lightbox img{max-width:92vw;max-height:88vh;border-radius:12px}
-#lightbox{background:transparent;padding:0;width:auto}
+  :root{--bg:#131a26;--card:#1c2535;--line:#2a3548;--txt:#e8edf6;--mut:#8b98ad;--acc:#6f8cff;--bad:#e5484d;--ok:#3dd68c}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+  .wrap{max-width:820px;margin:0 auto;padding:24px 16px 60px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px}
+  .center{min-height:100vh;display:grid;place-items:center;padding:16px}
+  .center .card{width:100%;max-width:380px}
+  h1{margin:0 0 6px;font-size:28px} h2{margin:0 0 14px;font-size:18px}
+  p.mut,.mut{color:var(--mut)}
+  label{display:block;font-weight:600;font-size:13px;margin:12px 0 6px}
+  input,select,textarea{width:100%;background:#111826;border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:10px 12px;font:inherit}
+  textarea{min-height:80px;resize:vertical}
+  button,.btn{background:var(--acc);color:#0d1424;border:0;border-radius:10px;padding:10px 18px;font:inherit;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block}
+  button.ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+  button.small{padding:5px 10px;font-size:13px}
+  button.danger{background:var(--bad);color:#fff}
+  .err{color:var(--bad);margin:10px 0 0;min-height:1em}
+  header{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  header img{width:40px;height:40px;border-radius:50%}
+  header .sp{flex:1}
+  .tag{font-size:12px;border:1px solid var(--line);border-radius:99px;padding:1px 8px;color:var(--mut)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .log{display:flex;gap:12px;padding:14px 0;border-top:1px solid var(--line)}
+  .log:first-child{border-top:0}
+  .log img.av{width:36px;height:36px;border-radius:50%;flex:none}
+  .log .body{flex:1;min-width:0}
+  .log .note{white-space:pre-wrap;word-break:break-word;margin-top:4px}
+  .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .thumbs img{height:90px;border-radius:8px;border:1px solid var(--line);cursor:zoom-in}
+  .act{font-weight:700;color:var(--acc)}
+  .urow{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+  .urow:first-child{border-top:0}
+  .urow img{width:30px;height:30px;border-radius:50%}
+  .urow .sp{flex:1}
+  section{margin-bottom:20px}
+  .hide{display:none!important}
+  @media(max-width:560px){.row{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<div id="lock" hidden>
-  <h1 style="font-size:2rem">Mod area</h1>
-  <p class="sub">Enter the team password.</p>
-  <label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password">
-  <p id="lockErr" class="err" style="padding:8px 0 0;text-align:left" hidden></p>
-  <div class="row"><button class="btn" id="unlock">Enter</button></div>
+
+<!-- Login -->
+<div id="login" class="center hide">
+  <div class="card">
+    <h1>Mod area</h1>
+    <p class="mut">Sign in with Discord to continue.</p>
+    <a class="btn" href="/api/login">Sign in with Discord</a>
+    <div id="loginErr" class="err"></div>
+  </div>
 </div>
 
-<main class="wrap" id="app" hidden>
-  <header>
-    <div><h1>Mod Logs</h1><p class="sub">Everything that was done, with proof.</p></div>
-    <button class="btn" id="new">Create a log</button>
-  </header>
-  <input class="search" id="q" placeholder="Search a mod, a target, an action…" aria-label="Search">
-  <section class="feed" id="feed" aria-live="polite"></section>
-</main>
+<!-- Pending / banned -->
+<div id="blocked" class="center hide">
+  <div class="card">
+    <h1 id="blockedTitle"></h1>
+    <p class="mut" id="blockedText"></p>
+    <a class="btn ghost" href="/api/logout">Sign out</a>
+  </div>
+</div>
 
-<dialog id="dlg">
-  <h2>New log</h2>
-  <label for="mod">Your mod name</label><input id="mod" maxlength="40">
-  <label for="target">Target (player, game, file…)</label><input id="target" maxlength="80" placeholder="e.g. slbr uncopylocked">
-  <label for="action">Action</label>
-  <select id="action"><option>Unlock</option><option>Ban</option><option>Warning</option><option>Deletion</option><option>Other</option></select>
-  <label for="note">Details</label><textarea id="note" rows="4" maxlength="2000" placeholder="What happened?"></textarea>
-  <label>Screenshots</label>
-  <div class="drop" id="drop" tabindex="0">Click, drag or paste (Ctrl+V) images — 4 max</div>
-  <input type="file" id="file" accept="image/*" multiple hidden>
-  <div class="prev" id="prev"></div>
-  <p id="formErr" class="err" style="padding:8px 0 0;text-align:left" hidden></p>
-  <div class="row"><button class="btn ghost" id="cancel">Cancel</button><button class="btn" id="save">Save log</button></div>
-</dialog>
-<dialog id="lightbox"><img alt="Enlarged screenshot"></dialog>
+<!-- App -->
+<div id="app" class="wrap hide">
+  <header>
+    <img id="meAv" alt="">
+    <div><strong id="meName"></strong> <span class="tag" id="meRole"></span></div>
+    <div class="sp"></div>
+    <a class="btn ghost small" href="/api/logout">Sign out</a>
+  </header>
+
+  <section class="card hide" id="usersBox">
+    <h2>Members</h2>
+    <div id="users"></div>
+  </section>
+
+  <section class="card">
+    <h2>New log</h2>
+    <form id="form">
+      <div class="row">
+        <div><label>Target</label><input id="target" maxlength="80" placeholder="User or ID" required></div>
+        <div><label>Action</label>
+          <select id="action">
+            <option>Warn</option><option>Mute</option><option>Kick</option><option>Ban</option><option>Unban</option><option>Other</option>
+          </select>
+        </div>
+      </div>
+      <label>Note</label><textarea id="note" maxlength="2000"></textarea>
+      <label>Screenshots (up to 4)</label><input id="files" type="file" accept="image/*" multiple>
+      <div style="margin-top:14px"><button type="submit">Save log</button></div>
+      <div id="formErr" class="err"></div>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Logs</h2>
+    <div id="logs"></div>
+  </section>
+</div>
 
 <script>
-const $=s=>document.querySelector(s);
-let pw=localStorage.getItem("modpw")||"", logs=[], imgs=[];
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const hue=s=>{let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return h};
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const show = (id) => ["login", "blocked", "app"].forEach((x) => $(x).classList.toggle("hide", x !== id));
+let me = null;
 
-async function api(method,body){
-  const r=await fetch("/api/logs",{method,headers:{"Content-Type":"application/json","x-mod-password":pw},body:body?JSON.stringify(body):undefined});
-  const d=await r.json().catch(()=>({}));
-  if(!r.ok) throw Object.assign(new Error(d.error||("Error "+r.status+": the API is not responding correctly (check that the api folder is in the repo).")),{status:r.status});
-  return d;
+async function api(path, opts = {}) {
+  const r = await fetch(path, {
+    credentials: "same-origin",
+    headers: opts.body ? { "Content-Type": "application/json" } : undefined,
+    ...opts,
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  let data = null;
+  try { data = await r.json(); } catch (e) {}
+  if (!r.ok) { const e = new Error((data && data.error) || "Error " + r.status); e.status = r.status; throw e; }
+  return data;
 }
-async function load(){
-  try{
-    logs=await api("GET");
-    $("#lock").hidden=true;$("#app").hidden=false;render();
-  }catch(e){
-    $("#app").hidden=true;$("#lock").hidden=false;
-    if(pw){$("#lockErr").textContent=e.message;$("#lockErr").hidden=false}
+
+async function init() {
+  try {
+    me = (await api("/api/me")).user;
+  } catch (e) {
+    if (e.status === 401) return show("login");
+    show("login"); $("loginErr").textContent = e.message; return;
   }
+  if (me.role === "pending") {
+    $("blockedTitle").textContent = "Waiting for approval";
+    $("blockedText").textContent = "You are signed in as " + me.name + ". An admin has to approve your account first.";
+    return show("blocked");
+  }
+  if (me.role === "banned") {
+    $("blockedTitle").textContent = "Access removed";
+    $("blockedText").textContent = "Your access to this area has been removed.";
+    return show("blocked");
+  }
+  $("meAv").src = me.avatar; $("meName").textContent = me.name; $("meRole").textContent = me.role;
+  const admin = me.role === "owner" || me.role === "admin";
+  $("usersBox").classList.toggle("hide", !admin);
+  show("app");
+  loadLogs();
+  if (admin) loadUsers();
 }
-function render(){
-  const q=$("#q").value.toLowerCase();
-  const list=logs.filter(l=>[l.mod,l.target,l.action,l.note].join(" ").toLowerCase().includes(q));
-  $("#feed").innerHTML=list.length?list.map(l=>`
-  <article class="log">
-    <div class="top">
-      <div class="av" style="background:hsl(${hue(l.mod)} 55% 42%)">${esc(l.mod[0].toUpperCase())}</div>
-      <div><div class="who">${esc(l.mod)}</div><div class="when">${new Date(l.at).toLocaleString("en-US",{dateStyle:"medium",timeStyle:"short"})}</div></div>
-      <span class="tag">${esc(l.action)}</span>
+
+async function loadLogs() {
+  try {
+    const logs = await api("/api/logs");
+    $("logs").innerHTML = logs.length ? logs.map(renderLog).join("") : '<p class="mut">No logs yet.</p>';
+  } catch (e) { $("logs").innerHTML = '<p class="err">' + esc(e.message) + "</p>"; }
+}
+function renderLog(l) {
+  const can = me.role === "owner" || me.role === "admin" || l.uid === me.id;
+  return `<div class="log">
+    <img class="av" src="${esc(l.avatar)}" alt="">
+    <div class="body">
+      <div><strong>${esc(l.mod)}</strong> <span class="act">${esc(l.action)}</span> → ${esc(l.target)}
+        <span class="mut"> · ${new Date(l.at).toLocaleString()}</span></div>
+      ${l.note ? `<div class="note">${esc(l.note)}</div>` : ""}
+      ${(l.images || []).length ? `<div class="thumbs">${l.images.map((s) => `<img src="${esc(s)}" onclick="window.open(this.src)">`).join("")}</div>` : ""}
     </div>
-    <h2>${esc(l.target)}</h2>
-    ${l.note?`<p class="note">${esc(l.note)}</p>`:""}
-    ${l.images&&l.images.length?`<div class="shots">${l.images.map(i=>`<img src="${i}" alt="Screenshot by ${esc(l.mod)}" loading="lazy">`).join("")}</div>`:""}
-  </article>`).join(""):`<p class="empty">${logs.length?"No results.":"No logs yet. Click “Create a log”."}</p>`;
+    ${can ? `<button class="small ghost" onclick="delLog('${esc(l.id)}')">Delete</button>` : ""}
+  </div>`;
 }
-$("#q").oninput=render;
-$("#feed").onclick=e=>{if(e.target.tagName==="IMG"){$("#lightbox img").src=e.target.src;$("#lightbox").showModal()}};
-$("#lightbox").onclick=()=>$("#lightbox").close();
-
-$("#unlock").onclick=()=>{pw=$("#pw").value;localStorage.setItem("modpw",pw);load()};
-$("#pw").onkeydown=e=>{if(e.key==="Enter")$("#unlock").click()};
-
-// image compression to keep things light
-function shrink(file){return new Promise(res=>{
-  const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{
-    const k=Math.min(1,1200/Math.max(im.width,im.height)),c=document.createElement("canvas");
-    c.width=im.width*k;c.height=im.height*k;c.getContext("2d").drawImage(im,0,0,c.width,c.height);
-    res(c.toDataURL("image/jpeg",.72))};im.src=r.result};r.readAsDataURL(file)})}
-async function addFiles(files){
-  for(const f of files){if(imgs.length>=4)break;if(f.type.startsWith("image/"))imgs.push(await shrink(f))}
-  drawPrev();
+async function delLog(id) {
+  if (!confirm("Delete this log?")) return;
+  try { await api("/api/logs?id=" + encodeURIComponent(id), { method: "DELETE" }); loadLogs(); }
+  catch (e) { alert(e.message); }
 }
-function drawPrev(){
-  $("#prev").innerHTML=imgs.map((s,i)=>`<div><img src="${s}" alt="Preview"><button data-i="${i}" aria-label="Remove">×</button></div>`).join("");
-}
-$("#prev").onclick=e=>{if(e.target.dataset.i){imgs.splice(+e.target.dataset.i,1);drawPrev()}};
-$("#drop").onclick=()=>$("#file").click();
-$("#file").onchange=e=>{addFiles(e.target.files);e.target.value=""};
-$("#drop").ondragover=e=>{e.preventDefault();$("#drop").classList.add("over")};
-$("#drop").ondragleave=()=>$("#drop").classList.remove("over");
-$("#drop").ondrop=e=>{e.preventDefault();$("#drop").classList.remove("over");addFiles(e.dataTransfer.files)};
-document.onpaste=e=>{if($("#dlg").open)addFiles([...e.clipboardData.files])};
 
-$("#new").onclick=()=>{
-  imgs=[];drawPrev();$("#target").value="";$("#note").value="";$("#formErr").hidden=true;
-  $("#mod").value=localStorage.getItem("modname")||"";$("#dlg").showModal();
-};
-$("#cancel").onclick=()=>$("#dlg").close();
-$("#save").onclick=async()=>{
-  const mod=$("#mod").value.trim(),target=$("#target").value.trim();
-  if(!mod||!target){$("#formErr").textContent="Enter your name and the target.";$("#formErr").hidden=false;return}
-  localStorage.setItem("modname",mod);$("#save").disabled=true;
-  try{
-    const l=await api("POST",{mod,target,action:$("#action").value,note:$("#note").value,images:imgs});
-    logs.unshift(l);render();$("#dlg").close();
-  }catch(e){$("#formErr").textContent=e.message;$("#formErr").hidden=false}
-  $("#save").disabled=false;
-};
-load();
+async function loadUsers() {
+  try {
+    const { users } = await api("/api/users");
+    const order = { pending: 0, mod: 1, admin: 2, owner: 3, banned: 4 };
+    users.sort((a, b) => (order[a.role] ?? 9) - (order[b.role] ?? 9));
+    $("users").innerHTML = users.map((u) => {
+      const btns = [];
+      if (u.role !== "owner") {
+        if (u.role === "pending" || u.role === "banned") btns.push(["approve", "Approve"]);
+        if (u.role !== "banned") btns.push(["kick", "Remove"]);
+        if (me.role === "owner" && u.role === "mod") btns.push(["promote", "Make admin"]);
+        if (me.role === "owner" && u.role === "admin") btns.push(["demote", "Remove admin"]);
+      }
+      return `<div class="urow"><img src="${esc(u.avatar)}" alt=""><div class="sp"><strong>${esc(u.name)}</strong> <span class="mut">@${esc(u.username)}</span></div>
+        <span class="tag">${esc(u.role)}</span>
+        ${btns.map(([a, t]) => `<button class="small ghost" onclick="userAct('${esc(u.id)}','${a}')">${t}</button>`).join("")}</div>`;
+    }).join("");
+  } catch (e) { $("users").innerHTML = '<p class="err">' + esc(e.message) + "</p>"; }
+}
+async function userAct(id, action) {
+  try { await api("/api/users", { method: "POST", body: { id, action } }); loadUsers(); }
+  catch (e) { alert(e.message); }
+}
+
+// Shrink images so they fit under the server's size limit
+function shrink(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      let max = 1100, q = 0.8, out;
+      const w0 = img.width, h0 = img.height;
+      for (let i = 0; i < 6; i++) {
+        const k = Math.min(1, max / Math.max(w0, h0));
+        const c = document.createElement("canvas");
+        c.width = Math.round(w0 * k); c.height = Math.round(h0 * k);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        out = c.toDataURL("image/jpeg", q);
+        if (out.length < 550000) break;
+        max *= 0.8; q -= 0.08;
+      }
+      URL.revokeObjectURL(url);
+      out.length < 600000 ? resolve(out) : reject(new Error("Image too large."));
+    };
+    img.onerror = () => reject(new Error("Could not read the image."));
+    img.src = url;
+  });
+}
+
+$("form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  $("formErr").textContent = "";
+  try {
+    const files = [...$("files").files].slice(0, 4);
+    const images = await Promise.all(files.map(shrink));
+    await api("/api/logs", { method: "POST", body: { target: $("target").value, action: $("action").value, note: $("note").value, images } });
+    $("form").reset();
+    loadLogs();
+  } catch (e) { $("formErr").textContent = e.message; }
+});
+
+init();
 </script>
 </body>
 </html>
