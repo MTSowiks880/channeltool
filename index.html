@@ -108,6 +108,8 @@ main{padding:28px 36px 80px;max-width:1100px;width:100%}
 .stat .v{font-size:28px;font-weight:800;letter-spacing:-.02em;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stat .v.small{font-size:18px;margin-top:12px}
 .stat::after{content:"";position:absolute;right:-30px;top:-30px;width:90px;height:90px;border-radius:50%;background:var(--c,var(--acc));opacity:.09}
+.analytics-row{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.analytics-row:last-child{border-bottom:0}
 
 /* toolbar */
 .bar{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}
@@ -373,6 +375,7 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
   <aside>
     <div class="brand"><div class="logo"><svg><use href="#i-shield"/></svg></div>Mod Panel</div>
     <button class="nav on" data-view="logs"><svg><use href="#i-list"/></svg>Logs</button>
+    <button class="nav" data-view="analytics"><svg><use href="#i-chart"/></svg>Analytics</button>
     <button class="nav" data-view="new"><svg><use href="#i-plus"/></svg>New log</button>
     <button class="nav" data-view="quizzes"><svg><use href="#i-quiz"/></svg>Quizzes</button>
     <button class="nav" data-view="forums"><svg><use href="#i-users"/></svg>Forums</button>
@@ -403,6 +406,19 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
         <div class="chips" id="chips"></div>
       </div>
       <div id="logs"></div>
+    </section>
+
+    <section id="v-analytics" class="hide">
+      <div class="top">
+        <div><h2>Analytics</h2><p class="mut">Moderation activity and ticket performance.</p></div>
+        <div class="chips" id="analyticsPeriods">
+          <button class="chip on" data-period="7d">7 days</button><button class="chip" data-period="30d">30 days</button><button class="chip" data-period="all">All time</button>
+        </div>
+      </div>
+      <div class="stats" id="analyticsKpis"></div>
+      <div class="card" style="margin-top:18px"><h3>Action breakdown</h3><div id="analyticsActions" class="members"></div></div>
+      <div class="card" style="margin-top:18px"><h3>Moderator leaderboard</h3><div id="analyticsMods" class="members"></div></div>
+      <div id="analyticsError" class="mut" style="margin-top:14px"></div>
     </section>
 
     <!-- New log view -->
@@ -551,6 +567,7 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
 
   <nav class="mnav">
     <button class="nav on" data-view="logs"><svg><use href="#i-list"/></svg>Logs</button>
+    <button class="nav" data-view="analytics"><svg><use href="#i-chart"/></svg>Stats</button>
     <button class="nav" data-view="new"><svg><use href="#i-plus"/></svg>New</button>
     <button class="nav" data-view="quizzes"><svg><use href="#i-quiz"/></svg>Quiz</button>
     <button class="nav" data-view="forums"><svg><use href="#i-users"/></svg>Forums</button>
@@ -616,12 +633,13 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.q
 
 /* navigation */
 function go(view) {
-  ["logs", "new", "members", "quizzes", "take", "builder", "review", "forums", "announcements"].forEach((v) => $("v-" + v).classList.toggle("hide", v !== view));
+  ["logs", "analytics", "new", "members", "quizzes", "take", "builder", "review", "forums", "announcements"].forEach((v) => { const el = $("v-" + v); if (el) el.classList.toggle("hide", v !== view); });
   const navView = ["take", "builder"].includes(view) ? "quizzes" : view;
   document.querySelectorAll(".nav[data-view]").forEach((n) => n.classList.toggle("on", n.dataset.view === navView));
   if (view === "quizzes") loadQuizzes();
   if (view === "review") loadSubs();
   if (view === "logs") loadLogs();
+  if (view === "analytics") loadAnalytics();
   if (view === "members") loadUsers();
   if (view === "forums") loadForums();
   if (view === "announcements") loadAnnouncements();
@@ -923,6 +941,65 @@ async function init() {
 }
 
 /* logs */
+// Analytics calculations live in this page so they do not consume another Vercel function.
+let analyticsPeriod = "7d";
+const analyticsAction = (value) => {
+  const a = String(value || "").trim().toLowerCase();
+  if (["warn", "warning", "warns"].includes(a)) return "Warn";
+  if (["mute", "muted", "mutes"].includes(a)) return "Mute";
+  if (["kick", "kicked", "kicks"].includes(a)) return "Kick";
+  if (["ban", "banned", "bans"].includes(a)) return "Ban";
+  if (["unban", "unbanned", "unbans"].includes(a)) return "Unban";
+  return "Other";
+};
+const analyticsDuration = (ms) => {
+  if (!(ms > 0)) return "0m";
+  const min = Math.floor(ms / 60000), hrs = ms / 3600000, days = ms / 86400000;
+  if (min < 60) return Math.max(1, min) + "m";
+  if (hrs < 24) return (Math.round(hrs * 10) / 10).toString() + "h";
+  return (Math.round(days * 10) / 10).toString() + "d";
+};
+function calculateAnalytics(logs, tickets, period, now = Date.now()) {
+  const start = period === "7d" ? now - 7 * 864e5 : period === "30d" ? now - 30 * 864e5 : 0;
+  const inRange = (x) => { const t = Date.parse(x && x.at); return !start || (Number.isFinite(t) && t >= start); };
+  logs = logs.filter(inRange); tickets = tickets.filter(inRange);
+  const mods = new Map(), counts = { Warn: 0, Mute: 0, Kick: 0, Ban: 0, Unban: 0, Other: 0 };
+  for (const l of logs) {
+    if (!l) continue;
+    const key = l.uid || l.mod || "unknown", action = analyticsAction(l.action);
+    if (!mods.has(key)) mods.set(key, { mod: l.mod || "Unknown", count: 0, lastActive: l.at || null });
+    const m = mods.get(key); m.count++; if (l.at && (!m.lastActive || Date.parse(l.at) > Date.parse(m.lastActive))) m.lastActive = l.at;
+    counts[action]++;
+  }
+  const closed = tickets.filter(t => t && t.status === "closed").length;
+  const responses = [], resolutions = [];
+  for (const t of tickets) {
+    if (!t) continue;
+    const created = Date.parse(t.at);
+    const reply = (Array.isArray(t.messages) ? t.messages : []).find((m, i) => m && m.staff && (i > 0 || m.uid !== t.uid));
+    if (Number.isFinite(created) && reply && Date.parse(reply.at) >= created) responses.push(Date.parse(reply.at) - created);
+    const ended = Date.parse(t.updated);
+    if (t.status === "closed" && Number.isFinite(created) && Number.isFinite(ended) && ended >= created) resolutions.push(ended - created);
+  }
+  const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+  return { logs, tickets, mods: [...mods.values()].sort((a,b) => b.count-a.count), counts, closed, responses: avg(responses), resolutions: avg(resolutions) };
+}
+async function loadAnalytics() {
+  $("analyticsError").textContent = "Loading analytics…";
+  document.querySelectorAll("#analyticsPeriods [data-period]").forEach(b => b.classList.toggle("on", b.dataset.period === analyticsPeriod));
+  try {
+    const data = await api("/api/logs?stats=1");
+    const s = calculateAnalytics(data.logs || [], data.tickets || [], analyticsPeriod);
+    const total = s.logs.length, top = s.mods[0];
+    $("analyticsKpis").innerHTML = [["Total actions", total, "var(--acc)"], ["Active moderators", s.mods.length, "var(--mute)"], ["Tickets", s.tickets.length, "var(--kick)"], ["Ticket close rate", (s.tickets.length ? (s.closed / s.tickets.length * 100).toFixed(1) : "0.0") + "%", "var(--unban)"]].map(([k,v,c]) => `<div class="stat" style="--c:${c}"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join("");
+    $("analyticsActions").innerHTML = Object.entries(s.counts).map(([name,count]) => `<div class="analytics-row"><b>${esc(name)}</b><span>${count} · ${total ? (count / total * 100).toFixed(1) : "0.0"}%</span></div>`).join("");
+    $("analyticsMods").innerHTML = s.mods.length ? s.mods.map((m,i) => `<div class="analytics-row"><b>${i+1}. ${esc(m.mod)}</b><span>${m.count} actions · last active ${m.lastActive ? esc(new Date(m.lastActive).toLocaleDateString()) : "—"}</span></div>`).join("") : '<div class="mut">No moderator activity in this period.</div>';
+    const extras = `<p class="mut">Average first staff response: ${s.responses == null ? "N/A" : analyticsDuration(s.responses)} · Average ticket resolution: ${s.resolutions == null ? "N/A" : analyticsDuration(s.resolutions)}${top ? ` · Most active: ${esc(top.mod)}` : ""}</p>`;
+    $("analyticsError").innerHTML = extras;
+  } catch (e) { $("analyticsError").textContent = "Failed to load analytics: " + e.message; }
+}
+$("analyticsPeriods").addEventListener("click", e => { const b = e.target.closest("[data-period]"); if (!b) return; analyticsPeriod = b.dataset.period; loadAnalytics(); });
+
 function buildChips() {
   $("chips").innerHTML = ["All", ...Object.keys(ACTIONS)].map((a) =>
     `<button class="chip ${a === filter ? "on" : ""}" data-a="${a}" style="--c:${a === "All" ? "var(--acc)" : act(a).c}">${a}</button>`).join("");
