@@ -290,6 +290,10 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
 .forum-delete{opacity:.7}
 @media(max-width:850px){.forum-layout{grid-template-columns:1fr}.forum-side{min-height:0}.forum-channels{grid-template-columns:repeat(auto-fill,minmax(135px,1fr))}.forum-chat{min-height:480px}}
 
+
+/* announcements */
+.ann-list{display:grid;gap:12px}.ann-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;gap:12px}.ann-card .av{width:40px;height:40px;border-radius:50%;flex:none;background:var(--panel2)}.ann-body{flex:1;min-width:0}.ann-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:8px}.ann-head time{font-size:12px;color:var(--dim)}.ann-text{white-space:pre-wrap;overflow-wrap:anywhere;color:#d5dae6}.ann-images{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.ann-images img{width:150px;height:110px;object-fit:cover;border-radius:9px;border:1px solid var(--line);cursor:zoom-in}.ann-compose{margin-bottom:16px}.ann-compose textarea{min-height:100px}.ann-compose-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+
 </style>
 </head>
 <body>
@@ -299,6 +303,7 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
     <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
     <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-megaphone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 13v-2Z"/><path d="M11.6 15.5 13 21l-4-1-1.5-5.5M5 13.5v4"/></symbol>
     <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
     <symbol id="i-out" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
@@ -350,6 +355,7 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
     <button class="nav" data-view="new"><svg><use href="#i-plus"/></svg>New log</button>
     <button class="nav" data-view="quizzes"><svg><use href="#i-quiz"/></svg>Quizzes</button>
     <button class="nav" data-view="forums"><svg><use href="#i-users"/></svg>Forums</button>
+    <button class="nav" data-view="announcements"><svg><use href="#i-megaphone"/></svg>Annonces</button>
     <button class="nav adminOnly hide" data-view="review"><svg><use href="#i-check"/></svg>Review<span class="count revCount hide"></span></button>
     <button class="nav adminOnly hide" data-view="members"><svg><use href="#i-users"/></svg>Members<span class="count pendCount hide"></span></button>
     <div class="side-sp"></div>
@@ -451,6 +457,18 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
       </div>
     </section>
 
+    <!-- Announcements -->
+    <section id="v-announcements" class="hide">
+      <div class="top"><div><h2>Annonces</h2><p class="mut">Les informations importantes publiées par l’administration.</p></div></div>
+      <form class="card ann-compose hide" id="announcementForm">
+        <div class="field"><label for="announcementText">Nouvelle annonce</label><textarea id="announcementText" maxlength="4000" placeholder="Écris une annonce pour les membres…"></textarea></div>
+        <div class="forum-preview" id="announcementPreview"></div>
+        <div class="ann-compose-foot"><label class="forum-upload btn ghost sm" for="announcementFiles"><svg><use href="#i-image"/></svg> Ajouter des images <span id="announcementImageCount">0/4</span></label><input id="announcementFiles" type="file" accept="image/*" multiple style="display:none"><button class="btn" id="announcementSend" type="submit">Publier</button></div>
+        <div class="err" id="announcementErr"></div>
+      </form>
+      <div class="ann-list" id="announcementList"><div class="forum-empty">Chargement des annonces…</div></div>
+    </section>
+
     <!-- Quizzes list -->
     <section id="v-quizzes" class="hide">
       <div class="top">
@@ -511,6 +529,7 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
     <button class="nav" data-view="new"><svg><use href="#i-plus"/></svg>New</button>
     <button class="nav" data-view="quizzes"><svg><use href="#i-quiz"/></svg>Quiz</button>
     <button class="nav" data-view="forums"><svg><use href="#i-users"/></svg>Forums</button>
+    <button class="nav" data-view="announcements"><svg><use href="#i-megaphone"/></svg>Annonces</button>
     <button class="nav adminOnly hide" data-view="review"><svg><use href="#i-check"/></svg>Review<span class="count revCount hide"></span></button>
     <button class="nav adminOnly hide" data-view="members"><svg><use href="#i-users"/></svg>Members<span class="count pendCount hide"></span></button>
     <a class="nav" href="/api/logout"><svg><use href="#i-out"/></svg>Sign out</a>
@@ -572,7 +591,7 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.q
 
 /* navigation */
 function go(view) {
-  ["logs", "new", "members", "quizzes", "take", "builder", "review", "forums"].forEach((v) => $("v-" + v).classList.toggle("hide", v !== view));
+  ["logs", "new", "members", "quizzes", "take", "builder", "review", "forums", "announcements"].forEach((v) => $("v-" + v).classList.toggle("hide", v !== view));
   const navView = ["take", "builder"].includes(view) ? "quizzes" : view;
   document.querySelectorAll(".nav[data-view]").forEach((n) => n.classList.toggle("on", n.dataset.view === navView));
   if (view === "quizzes") loadQuizzes();
@@ -580,6 +599,7 @@ function go(view) {
   if (view === "logs") loadLogs();
   if (view === "members") loadUsers();
   if (view === "forums") loadForums();
+  if (view === "announcements") loadAnnouncements();
   window.scrollTo({ top: 0 });
 }
 document.querySelectorAll("[data-view],[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.view || b.dataset.go)));
@@ -745,6 +765,25 @@ $("forumMessageForm").addEventListener("submit", async e => {
   finally { $("forumSendBtn").disabled = false; }
 });
 
+
+
+/* announcements: readable by approved members, publish/delete by admins only */
+let announcementImages = [];
+async function loadAnnouncements() {
+  $("announcementList").innerHTML = '<div class="forum-empty">Chargement…</div>';
+  $("announcementForm").classList.toggle("hide", !admin);
+  try { const data = await api("/api/announcements"); renderAnnouncements(data.announcements || []); }
+  catch (e) { $("announcementList").innerHTML = `<div class="forum-empty">${esc(e.message)}</div>`; }
+}
+function renderAnnouncements(items) {
+  if (!items.length) { $("announcementList").innerHTML = '<div class="forum-empty">Aucune annonce pour le moment.</div>'; return; }
+  $("announcementList").innerHTML = items.map(a => `<article class="ann-card"><img class="av" src="${esc(a.avatar || "https://cdn.discordapp.com/embed/avatars/0.png")}" alt=""><div class="ann-body"><div class="ann-head"><b>${esc(a.author)}</b><span class="role ${esc(a.role || "admin")}">${esc(a.role || "admin")}</span><time>${new Date(a.at).toLocaleString()}</time>${admin ? `<button class="icon-btn" style="margin-left:auto" title="Supprimer" data-ann-delete="${esc(a.id)}">×</button>` : ""}</div>${a.text ? `<div class="ann-text">${esc(a.text)}</div>` : ""}${(a.images || []).length ? `<div class="ann-images">${a.images.map(src => `<img src="${esc(src)}" alt="Image de l’annonce">`).join("")}</div>` : ""}</div></article>`).join("");
+  $("announcementList").querySelectorAll(".ann-images img").forEach(img => img.onclick = () => lightbox(img.src));
+  $("announcementList").querySelectorAll("[data-ann-delete]").forEach(b => b.onclick = async () => { if (!await confirmBox("Supprimer cette annonce ?", "Cette action est définitive.", "Supprimer")) return; try { await api("/api/announcements?id=" + encodeURIComponent(b.dataset.annDelete), { method: "DELETE" }); toast("Annonce supprimée"); loadAnnouncements(); } catch(e) { toast(e.message, true); } });
+}
+function renderAnnouncementPreview() { $("announcementPreview").innerHTML = announcementImages.map((src,i) => `<div class="pimg"><img src="${src}" alt=""><button type="button" data-ann-img-remove="${i}">×</button></div>`).join(""); $("announcementImageCount").textContent = announcementImages.length + "/4"; $("announcementPreview").querySelectorAll("[data-ann-img-remove]").forEach(b => b.onclick = () => { announcementImages.splice(+b.dataset.annImgRemove,1); renderAnnouncementPreview(); }); }
+$("announcementFiles").addEventListener("change", async () => { for (const f of [...$("announcementFiles").files].filter(x => x.type.startsWith("image/"))) { if (announcementImages.length >= 4) { toast("Maximum 4 images.", true); break; } try { announcementImages.push(await shrink(f)); } catch(e) { toast(e.message, true); } } $("announcementFiles").value = ""; renderAnnouncementPreview(); });
+$("announcementForm").addEventListener("submit", async e => { e.preventDefault(); if (!admin) return; const text = $("announcementText").value.trim(); if (!text && !announcementImages.length) { $("announcementErr").textContent = "Écris un message ou ajoute une image."; return; } $("announcementErr").textContent = ""; $("announcementSend").disabled = true; try { await api("/api/announcements", { method:"POST", body:{ text, images:announcementImages } }); $("announcementText").value = ""; announcementImages = []; renderAnnouncementPreview(); toast("Annonce publiée"); await loadAnnouncements(); } catch(e) { $("announcementErr").textContent = e.message; } finally { $("announcementSend").disabled = false; } });
 
 async function init() {
   try {
