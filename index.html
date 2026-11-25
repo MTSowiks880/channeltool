@@ -126,8 +126,6 @@ input:focus,select:focus,textarea:focus{border-color:var(--acc);box-shadow:0 0 0
 textarea{min-height:120px;resize:vertical}
 label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
 
-
-/* staff forum */
 /* logs */
 .day{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin:22px 4px 10px;display:flex;align-items:center;gap:10px}
 .day::after{content:"";flex:1;height:1px;background:var(--line)}
@@ -157,25 +155,6 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
 .skel{height:96px;border-radius:var(--r);margin-bottom:10px;background:linear-gradient(90deg,var(--panel) 0%,var(--panel2) 50%,var(--panel) 100%);
   background-size:200% 100%;animation:sk 1.3s infinite}
 @keyframes sk{to{background-position:-200% 0}}
-
-
-/* staff forum */
-.forum-topic{display:flex;gap:14px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:10px;cursor:pointer;transition:border-color .15s,transform .15s}
-.forum-topic:hover{border-color:var(--line2);transform:translateY(-1px)}
-.forum-topic .av{width:40px;height:40px;border-radius:50%;flex:none;background:var(--panel2)}
-.forum-topic .body{flex:1;min-width:0}
-.forum-topic h3{font-size:15px;margin:0 0 5px;font-weight:700}
-.forum-topic .preview{color:#c5ccda;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.forum-meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:var(--mut);font-size:12px;margin-top:9px}
-.forum-post{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
-.forum-post:last-child{border-bottom:0}
-.forum-post .av{width:36px;height:36px;border-radius:50%;flex:none}
-.forum-post .content{flex:1;min-width:0}
-.forum-post .head{display:flex;gap:9px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-bottom:6px}
-.forum-post .head b{font-size:13px;color:var(--txt)}
-.forum-post p{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;color:#d5dae6}
-.forum-thread-title{font-size:21px;font-weight:800;margin:12px 0 4px}
-.forum-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
 
 /* form */
 .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px;max-width:720px}
@@ -270,6 +249,47 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
   .top h2{font-size:22px}
   .card{padding:18px}
 }
+
+/* staff forums */
+.forum-layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:14px;min-height:520px}
+.forum-side,.forum-chat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.forum-side-head{display:flex;align-items:center;justify-content:space-between;padding:15px;border-bottom:1px solid var(--line);font-weight:700}
+.forum-channels{padding:8px;display:grid;gap:5px}
+.forum-channel{width:100%;display:flex;align-items:center;gap:10px;padding:10px 11px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--mut);text-align:left;cursor:pointer;font:500 13.5px Inter,sans-serif}
+.forum-channel:hover{background:var(--panel2);color:var(--txt)}
+.forum-channel.on{background:rgba(124,108,255,.14);border-color:rgba(124,108,255,.25);color:#fff}
+.forum-channel .hash{font-size:17px;color:var(--acc2);font-weight:700}
+.forum-channel .fc-count{margin-left:auto;color:var(--dim);font-size:11px}
+.forum-chat{display:flex;flex-direction:column;min-height:520px}
+.forum-chat-head{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.forum-chat-head h3{margin:0;font-size:16px}
+.forum-chat-head p{margin:3px 0 0;color:var(--mut);font-size:12px}
+.forum-feed{padding:16px 18px;flex:1;min-height:250px;max-height:540px;overflow:auto}
+.forum-msg{display:flex;gap:10px;padding:10px 0}
+.forum-msg+.forum-msg{border-top:1px solid rgba(35,42,59,.65)}
+.forum-msg .av{width:34px;height:34px;border-radius:50%;flex:none;background:var(--panel2)}
+.forum-msg-main{flex:1;min-width:0}
+.forum-msg-head{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:4px}
+.forum-msg-head b{font-size:13px}
+.forum-msg-head time{font-size:11.5px;color:var(--dim)}
+.forum-msg-text{white-space:pre-wrap;overflow-wrap:anywhere;color:#d5dae6}
+.forum-msg-images{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+.forum-msg-images img{width:130px;height:95px;object-fit:cover;border-radius:9px;border:1px solid var(--line);cursor:zoom-in}
+.forum-compose{padding:13px 15px;border-top:1px solid var(--line);background:rgba(16,19,28,.45)}
+.forum-compose textarea{min-height:72px;max-height:180px}
+.forum-compose-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;flex-wrap:wrap}
+.forum-upload{display:flex;align-items:center;gap:8px;color:var(--mut);font-size:12px}
+.forum-upload input{display:none}
+.forum-preview{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+.forum-preview .pimg{position:relative}
+.forum-preview img{width:62px;height:48px;object-fit:cover;border-radius:7px;border:1px solid var(--line)}
+.forum-preview button{position:absolute;right:-6px;top:-6px;width:19px;height:19px;border:0;border-radius:50%;background:var(--ban);color:white;cursor:pointer}
+.forum-create{padding:14px;border-bottom:1px solid var(--line);display:grid;gap:9px}
+.forum-create .grid2{gap:9px}
+.forum-empty{padding:40px 16px;text-align:center;color:var(--mut)}
+.forum-delete{opacity:.7}
+@media(max-width:850px){.forum-layout{grid-template-columns:1fr}.forum-side{min-height:0}.forum-channels{grid-template-columns:repeat(auto-fill,minmax(135px,1fr))}.forum-chat{min-height:480px}}
+
 </style>
 </head>
 <body>
@@ -329,7 +349,7 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
     <button class="nav on" data-view="logs"><svg><use href="#i-list"/></svg>Logs</button>
     <button class="nav" data-view="new"><svg><use href="#i-plus"/></svg>New log</button>
     <button class="nav" data-view="quizzes"><svg><use href="#i-quiz"/></svg>Quizzes</button>
-    <button class="nav" data-view="forum"><svg><use href="#i-list"/></svg>Staff Forum</button>
+    <button class="nav" data-view="forums"><svg><use href="#i-users"/></svg>Forums</button>
     <button class="nav adminOnly hide" data-view="review"><svg><use href="#i-check"/></svg>Review<span class="count revCount hide"></span></button>
     <button class="nav adminOnly hide" data-view="members"><svg><use href="#i-users"/></svg>Members<span class="count pendCount hide"></span></button>
     <div class="side-sp"></div>
@@ -394,30 +414,41 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
 
 
 
-    <!-- Staff Forum -->
-    <section id="v-forum" class="hide">
+    <!-- Staff forums: moderator-created channels with chat-style messages -->
+    <section id="v-forums" class="hide">
       <div class="top">
-        <div><h2>Staff Forum</h2><p class="mut">Team discussions, member logs and system reports.</p></div>
-        <button class="btn" id="forumNew"><svg><use href="#i-plus"/></svg>New topic</button>
+        <div><h2>Staff forums</h2><p class="mut">Team channels for discussions, reports and screenshots.</p></div>
+        <button class="btn" id="forumCreateToggle"><svg><use href="#i-plus"/></svg>Create channel</button>
       </div>
-      <div class="bar">
-        <div class="search"><svg><use href="#i-search"/></svg><input id="forumQ" placeholder="Search topics, people or messages…"></div>
-        <div class="chips" id="forumChips"></div>
+      <div class="forum-layout">
+        <div class="forum-side">
+          <div class="forum-side-head"><span>Channels</span><span class="dim" id="forumChannelCount">0</span></div>
+          <div class="forum-create hide" id="forumCreateForm">
+            <div><label for="forumNewName">Channel name</label><input id="forumNewName" maxlength="40" placeholder="e.g. staff-chat"></div>
+            <div><label for="forumNewDesc">Description <span class="dim">(optional)</span></label><input id="forumNewDesc" maxlength="120" placeholder="What is this channel for?"></div>
+            <div class="form-foot"><button class="btn ghost sm" type="button" id="forumCreateCancel">Cancel</button><button class="btn sm" type="button" id="forumCreateSave">Create</button></div>
+            <div class="err" id="forumCreateErr"></div>
+          </div>
+          <div class="forum-channels" id="forumChannels"><div class="forum-empty">Loading channels…</div></div>
+        </div>
+        <div class="forum-chat">
+          <div class="forum-chat-head">
+            <div><h3 id="forumRoomTitle">Select a channel</h3><p id="forumRoomDesc">Choose a channel on the left to view messages.</p></div>
+            <button class="btn danger sm forum-delete hide" id="forumDeleteChannel">Delete channel</button>
+          </div>
+          <div class="forum-feed" id="forumMessages"><div class="forum-empty">No channel selected.</div></div>
+          <form class="forum-compose hide" id="forumMessageForm">
+            <textarea id="forumMessageText" maxlength="3000" placeholder="Message this channel…"></textarea>
+            <div class="forum-preview" id="forumMessagePreview"></div>
+            <div class="forum-compose-foot">
+              <label class="forum-upload btn ghost sm" for="forumMessageFiles"><svg><use href="#i-image"/></svg> Add images <span id="forumImageCount">0/4</span></label>
+              <input id="forumMessageFiles" type="file" accept="image/*" multiple>
+              <button class="btn sm" id="forumSendBtn" type="submit">Send message</button>
+            </div>
+            <div class="err" id="forumMessageErr"></div>
+          </form>
+        </div>
       </div>
-      <div id="forumList"></div>
-      <div id="forumCompose" class="card hide">
-        <div class="top"><div><h2>New topic</h2><p class="mut">Start a staff discussion or add a report.</p></div></div>
-        <form id="forumForm">
-          <div class="field"><label for="forumTitle">Title</label><input id="forumTitle" maxlength="120" placeholder="Topic title…" required></div>
-          <div class="field"><label for="forumCategory">Category</label><select id="forumCategory">
-            <option>Staff</option><option>Moderation</option><option>Server</option><option>Errors</option><option>System</option>
-          </select></div>
-          <div class="field"><label for="forumBody">Message</label><textarea id="forumBody" maxlength="5000" placeholder="Write your message or log details…" required></textarea></div>
-          <div class="err" id="forumErr"></div>
-          <div class="form-foot"><button type="button" class="btn ghost" id="forumCancel">Cancel</button><button class="btn" id="forumPublish">Publish topic</button></div>
-        </form>
-      </div>
-      <div id="forumThread" class="hide"></div>
     </section>
 
     <!-- Quizzes list -->
@@ -479,7 +510,7 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
     <button class="nav on" data-view="logs"><svg><use href="#i-list"/></svg>Logs</button>
     <button class="nav" data-view="new"><svg><use href="#i-plus"/></svg>New</button>
     <button class="nav" data-view="quizzes"><svg><use href="#i-quiz"/></svg>Quiz</button>
-    <button class="nav" data-view="forum"><svg><use href="#i-list"/></svg>Forum</button>
+    <button class="nav" data-view="forums"><svg><use href="#i-users"/></svg>Forums</button>
     <button class="nav adminOnly hide" data-view="review"><svg><use href="#i-check"/></svg>Review<span class="count revCount hide"></span></button>
     <button class="nav adminOnly hide" data-view="members"><svg><use href="#i-users"/></svg>Members<span class="count pendCount hide"></span></button>
     <a class="nav" href="/api/logout"><svg><use href="#i-out"/></svg>Sign out</a>
@@ -541,17 +572,179 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.q
 
 /* navigation */
 function go(view) {
-  ["logs", "new", "members", "quizzes", "take", "builder", "review", "forum"].forEach((v) => $("v-" + v).classList.toggle("hide", v !== view));
+  ["logs", "new", "members", "quizzes", "take", "builder", "review", "forums"].forEach((v) => $("v-" + v).classList.toggle("hide", v !== view));
   const navView = ["take", "builder"].includes(view) ? "quizzes" : view;
   document.querySelectorAll(".nav[data-view]").forEach((n) => n.classList.toggle("on", n.dataset.view === navView));
   if (view === "quizzes") loadQuizzes();
   if (view === "review") loadSubs();
   if (view === "logs") loadLogs();
   if (view === "members") loadUsers();
-  if (view === "forum") loadForum();
+  if (view === "forums") loadForums();
   window.scrollTo({ top: 0 });
 }
 document.querySelectorAll("[data-view],[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.view || b.dataset.go)));
+
+
+/* staff forums */
+let forumChannels = [], forumActiveId = null, forumImages = [];
+const forumCanManage = () => !!me && ["mod", "admin", "owner"].includes(me.role);
+
+async function loadForums() {
+  $("forumChannels").innerHTML = '<div class="forum-empty">Loading channels…</div>';
+  try {
+    const data = await api("/api/forums");
+    forumChannels = data.channels || [];
+    $("forumChannelCount").textContent = forumChannels.length;
+    renderForumChannels();
+    if (forumActiveId && forumChannels.some(c => c.id === forumActiveId)) {
+      await openForumChannel(forumActiveId, false);
+    } else if (forumChannels.length) {
+      await openForumChannel(forumChannels[0].id, false);
+    } else {
+      forumActiveId = null;
+      $("forumRoomTitle").textContent = "No channels yet";
+      $("forumRoomDesc").textContent = "A moderator can create the first channel.";
+      $("forumMessages").innerHTML = '<div class="forum-empty">No channels yet. Create one to start the conversation.</div>';
+      $("forumMessageForm").classList.add("hide");
+      $("forumDeleteChannel").classList.add("hide");
+    }
+  } catch (e) {
+    $("forumChannels").innerHTML = `<div class="forum-empty">${esc(e.message)}</div>`;
+  }
+}
+function renderForumChannels() {
+  $("forumChannelCount").textContent = forumChannels.length;
+  if (!forumChannels.length) {
+    $("forumChannels").innerHTML = '<div class="forum-empty">No channels created yet.</div>';
+    return;
+  }
+  $("forumChannels").innerHTML = forumChannels.map(c => `
+    <button class="forum-channel ${c.id === forumActiveId ? "on" : ""}" data-forum-id="${esc(c.id)}">
+      <span class="hash">#</span><span>${esc(c.name)}</span><span class="fc-count">${Number(c.messageCount || 0)}</span>
+    </button>`).join("");
+  $("forumChannels").querySelectorAll("[data-forum-id]").forEach(b => b.onclick = () => openForumChannel(b.dataset.forumId));
+}
+async function openForumChannel(id, refreshList = true) {
+  forumActiveId = id;
+  const channel = forumChannels.find(c => c.id === id);
+  if (!channel) return;
+  renderForumChannels();
+  $("forumRoomTitle").textContent = "# " + channel.name;
+  $("forumRoomDesc").textContent = channel.description || ("Created by " + channel.createdByName);
+  $("forumMessages").innerHTML = '<div class="forum-empty">Loading messages…</div>';
+  $("forumMessageForm").classList.remove("hide");
+  const canDelete = me && (me.role === "owner" || me.role === "admin" || channel.createdBy === me.id);
+  $("forumDeleteChannel").classList.toggle("hide", !canDelete);
+  try {
+    const data = await api("/api/forums?channelId=" + encodeURIComponent(id));
+    if (forumActiveId !== id) return;
+    renderForumMessages(data.messages || []);
+    if (refreshList) {
+      const fresh = await api("/api/forums");
+      forumChannels = fresh.channels || [];
+      renderForumChannels();
+    }
+  } catch (e) {
+    $("forumMessages").innerHTML = `<div class="forum-empty">${esc(e.message)}</div>`;
+  }
+}
+function renderForumMessages(messages) {
+  if (!messages.length) {
+    $("forumMessages").innerHTML = '<div class="forum-empty">No messages yet. Say hello to start this channel.</div>';
+    return;
+  }
+  $("forumMessages").innerHTML = messages.map(m => `
+    <div class="forum-msg">
+      <img class="av" src="${esc(m.avatar || "https://cdn.discordapp.com/embed/avatars/0.png")}" alt="">
+      <div class="forum-msg-main">
+        <div class="forum-msg-head"><b>${esc(m.author)}</b><time>${new Date(m.at).toLocaleString()}</time></div>
+        ${m.text ? `<div class="forum-msg-text">${esc(m.text)}</div>` : ""}
+        ${(m.images || []).length ? `<div class="forum-msg-images">${m.images.map(src => `<img src="${esc(src)}" alt="Attachment">`).join("")}</div>` : ""}
+      </div>
+      ${me && (me.role === "owner" || me.role === "admin" || m.uid === me.id) ? `<button class="icon-btn" title="Delete message" data-forum-message-delete="${esc(m.id)}">×</button>` : ""}
+    </div>`).join("");
+  $("forumMessages").querySelectorAll(".forum-msg-images img").forEach(img => img.onclick = () => lightbox(img.src));
+  $("forumMessages").querySelectorAll("[data-forum-message-delete]").forEach(b => b.onclick = async () => {
+    if (!await confirmBox("Delete message?", "This message will be permanently deleted.", "Delete")) return;
+    try {
+      await api("/api/forums?channelId=" + encodeURIComponent(forumActiveId) + "&messageId=" + encodeURIComponent(b.dataset.forumMessageDelete), { method: "DELETE" });
+      await openForumChannel(forumActiveId);
+      toast("Message deleted");
+    } catch (e) { toast(e.message, true); }
+  });
+  $("forumMessages").scrollTop = $("forumMessages").scrollHeight;
+}
+function renderForumImagePreview() {
+  $("forumMessagePreview").innerHTML = forumImages.map((src, i) => `<div class="pimg"><img src="${src}" alt=""><button type="button" data-forum-image-remove="${i}">×</button></div>`).join("");
+  $("forumImageCount").textContent = forumImages.length + "/4";
+  $("forumMessagePreview").querySelectorAll("[data-forum-image-remove]").forEach(b => b.onclick = () => {
+    forumImages.splice(Number(b.dataset.forumImageRemove), 1); renderForumImagePreview();
+  });
+}
+async function addForumImages(fileList) {
+  for (const file of [...fileList].filter(f => f.type.startsWith("image/"))) {
+    if (forumImages.length >= 4) { toast("Maximum 4 images per message.", true); break; }
+    try { forumImages.push(await shrink(file)); }
+    catch (e) { toast(e.message, true); }
+  }
+  renderForumImagePreview();
+}
+$("forumCreateToggle").onclick = () => {
+  $("forumCreateForm").classList.toggle("hide");
+  $("forumNewName").focus();
+};
+$("forumCreateCancel").onclick = () => {
+  $("forumCreateForm").classList.add("hide");
+  $("forumCreateErr").textContent = "";
+};
+$("forumCreateSave").onclick = async () => {
+  $("forumCreateErr").textContent = "";
+  const name = $("forumNewName").value.trim();
+  if (!name) { $("forumCreateErr").textContent = "Enter a channel name."; return; }
+  $("forumCreateSave").disabled = true;
+  try {
+    const channel = await api("/api/forums", { method: "POST", body: {
+      action: "create-channel", name, description: $("forumNewDesc").value
+    }});
+    $("forumNewName").value = ""; $("forumNewDesc").value = "";
+    $("forumCreateForm").classList.add("hide");
+    await loadForums();
+    await openForumChannel(channel.id);
+    toast("Channel created");
+  } catch (e) { $("forumCreateErr").textContent = e.message; }
+  finally { $("forumCreateSave").disabled = false; }
+};
+$("forumDeleteChannel").onclick = async () => {
+  const channel = forumChannels.find(c => c.id === forumActiveId);
+  if (!channel || !await confirmBox("Delete channel?", "This will delete the channel and all its messages.", "Delete")) return;
+  try {
+    await api("/api/forums?id=" + encodeURIComponent(channel.id), { method: "DELETE" });
+    forumActiveId = null;
+    toast("Channel deleted");
+    await loadForums();
+  } catch (e) { toast(e.message, true); }
+};
+$("forumMessageFiles").onchange = async () => {
+  await addForumImages($("forumMessageFiles").files);
+  $("forumMessageFiles").value = "";
+};
+$("forumMessageForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  if (!forumActiveId) return;
+  const text = $("forumMessageText").value.trim();
+  if (!text && !forumImages.length) { $("forumMessageErr").textContent = "Write a message or attach an image."; return; }
+  $("forumMessageErr").textContent = "";
+  $("forumSendBtn").disabled = true;
+  try {
+    await api("/api/forums", { method: "POST", body: {
+      action: "send-message", channelId: forumActiveId, text, images: forumImages
+    }});
+    $("forumMessageText").value = ""; forumImages = []; renderForumImagePreview();
+    await openForumChannel(forumActiveId);
+  } catch (e) { $("forumMessageErr").textContent = e.message; }
+  finally { $("forumSendBtn").disabled = false; }
+});
+
 
 async function init() {
   try {
@@ -988,122 +1181,6 @@ $("reviewList").addEventListener("click", async (e) => {
     await loadSubs();
   } catch (err) { toast(err.message, true); }
 });
-
-
-/* Staff Forum behavior */
-let forumThreads = [], forumFilter = "All", forumActive = null;
-const FORUM_CATS = ["All", "Staff", "Moderation", "Server", "Errors", "System"];
-function forumDate(value) {
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "" : d.toLocaleString([], {day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
-}
-function forumAvatar(src) { return src || "https://cdn.discordapp.com/embed/avatars/0.png"; }
-function buildForumChips() {
-  $("forumChips").innerHTML = FORUM_CATS.map((c) =>
-    `<button class="chip ${c === forumFilter ? "on" : ""}" data-fcat="${c}">${c}</button>`).join("");
-  $("forumChips").querySelectorAll("[data-fcat]").forEach((b) => b.onclick = () => {
-    forumFilter = b.dataset.fcat; buildForumChips(); renderForum();
-  });
-}
-async function loadForum() {
-  $("forumList").innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
-  $("forumCompose").classList.add("hide"); $("forumThread").classList.add("hide"); $("forumList").classList.remove("hide");
-  buildForumChips();
-  try {
-    forumThreads = await api("/api/forum");
-    renderForum();
-  } catch (e) {
-    $("forumList").innerHTML = `<div class="empty">${ico("warn")}<div>${esc(e.message)}</div></div>`;
-  }
-}
-function renderForum() {
-  const q = $("forumQ").value.trim().toLowerCase();
-  const rows = forumThreads.filter(t => (forumFilter === "All" || t.category === forumFilter) &&
-    (!q || [t.title,t.body,t.author,t.category,...(t.replies || []).map(r => r.body + " " + r.author)].join(" ").toLowerCase().includes(q)));
-  if (!rows.length) {
-    $("forumList").innerHTML = `<div class="empty">${ico("list")}<div>${forumThreads.length ? "No topics match your search." : "No topics yet. Start the first discussion."}</div></div>`;
-    return;
-  }
-  $("forumList").innerHTML = rows.map(t => `<article class="forum-topic" data-forum-id="${esc(t.id)}">
-    <img class="av" src="${esc(forumAvatar(t.avatar))}" alt="">
-    <div class="body"><h3>${esc(t.title)}</h3><div class="preview">${esc(t.body)}</div>
-      <div class="forum-meta"><b>${esc(t.author)}</b><span class="badge" style="--c:var(--acc2)">${esc(t.category)}</span>
-      <span>${(t.replies || []).length} replies</span><span>${forumDate(t.updatedAt || t.at)}</span></div>
-    </div></article>`).join("");
-  $("forumList").querySelectorAll("[data-forum-id]").forEach(el => el.onclick = () => openForumThread(el.dataset.forumId));
-}
-function showForumIndex() {
-  forumActive = null;
-  $("forumCompose").classList.add("hide");
-  $("forumThread").classList.add("hide");
-  $("forumList").classList.remove("hide");
-  $("forumQ").parentElement.parentElement.classList.remove("hide");
-  $("forumNew").classList.remove("hide");
-}
-function openForumThread(id) {
-  forumActive = forumThreads.find(t => t.id === id);
-  if (!forumActive) return;
-  $("forumList").classList.add("hide"); $("forumCompose").classList.add("hide");
-  $("forumQ").parentElement.parentElement.classList.add("hide"); $("forumNew").classList.add("hide");
-  const canDelete = admin || forumActive.uid === me.id;
-  const posts = [{author:forumActive.author,avatar:forumActive.avatar,body:forumActive.body,at:forumActive.at}, ...(forumActive.replies || [])];
-  $("forumThread").classList.remove("hide");
-  $("forumThread").innerHTML = `<button class="btn ghost sm" id="forumBack">← Back to topics</button>
-    <div class="card" style="margin-top:12px;max-width:none">
-      <div class="row" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-        <span class="badge" style="--c:var(--acc2)">${esc(forumActive.category)}</span>
-        ${canDelete ? '<button class="btn danger sm" id="forumDelete">Delete topic</button>' : ""}
-      </div>
-      <div class="forum-thread-title">${esc(forumActive.title)}</div>
-      <div class="mut" style="font-size:12px">Started by ${esc(forumActive.author)} · ${forumDate(forumActive.at)}</div>
-      ${posts.map(p => `<div class="forum-post"><img class="av" src="${esc(forumAvatar(p.avatar))}" alt=""><div class="content">
-        <div class="head"><b>${esc(p.author)}</b><span>${forumDate(p.at)}</span></div><p>${esc(p.body)}</p></div></div>`).join("")}
-      <form id="forumReplyForm" style="margin-top:18px">
-        <div class="field"><label for="forumReply">Write a reply</label><textarea id="forumReply" maxlength="3000" placeholder="Add a comment…" required></textarea></div>
-        <div class="err" id="forumReplyErr"></div>
-        <div class="forum-actions"><button class="btn" id="forumReplyBtn">Send reply</button></div>
-      </form>
-    </div>`;
-  $("forumBack").onclick = showForumIndex;
-  if ($("forumDelete")) $("forumDelete").onclick = deleteForumThread;
-  $("forumReplyForm").onsubmit = async (e) => {
-    e.preventDefault();
-    $("forumReplyBtn").disabled = true;
-    try {
-      const updated = await api("/api/forum", {method:"POST",body:{id:forumActive.id,body:$("forumReply").value}});
-      forumThreads = forumThreads.map(t => t.id === updated.id ? updated : t);
-      toast("Reply added"); openForumThread(updated.id);
-    } catch (err) { $("forumReplyErr").textContent = err.message; }
-    finally { if ($("forumReplyBtn")) $("forumReplyBtn").disabled = false; }
-  };
-}
-async function deleteForumThread() {
-  if (!forumActive || !(await confirmBox("Delete topic?", "This will also remove all replies.", "Delete"))) return;
-  try {
-    await api("/api/forum?id=" + encodeURIComponent(forumActive.id), {method:"DELETE"});
-    forumThreads = forumThreads.filter(t => t.id !== forumActive.id);
-    toast("Topic deleted"); showForumIndex(); renderForum();
-  } catch (e) { toast(e.message, true); }
-}
-$("forumNew").onclick = () => {
-  $("forumList").classList.add("hide"); $("forumThread").classList.add("hide");
-  $("forumQ").parentElement.parentElement.classList.add("hide"); $("forumNew").classList.add("hide");
-  $("forumCompose").classList.remove("hide"); $("forumForm").reset(); $("forumErr").textContent = "";
-};
-$("forumCancel").onclick = showForumIndex;
-$("forumQ").addEventListener("input", renderForum);
-$("forumList").addEventListener("click", () => {});
-$("forumForm").onsubmit = async (e) => {
-  e.preventDefault(); $("forumPublish").disabled = true; $("forumErr").textContent = "";
-  try {
-    const created = await api("/api/forum", {method:"POST",body:{
-      title:$("forumTitle").value,category:$("forumCategory").value,body:$("forumBody").value
-    }});
-    forumThreads.unshift(created); toast("Topic published"); showForumIndex(); renderForum();
-  } catch (err) { $("forumErr").textContent = err.message; }
-  finally { $("forumPublish").disabled = false; }
-};
-
 
 init();
 </script>
