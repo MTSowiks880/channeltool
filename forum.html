@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Staff Forum · Mod Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0d14;--bg2:#10131c;--panel:#141824;--panel2:#191e2c;--line:#232a3b;--line2:#2e3750;
+  --txt:#eef1f8;--mut:#8a93a8;--dim:#5d6578;--acc:#7c6cff;--acc2:#a78bfa;
+  --accg:linear-gradient(135deg,#7c6cff 0%,#b06cff 100%);--ban:#ff4d6d;--r:14px;
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--txt);font:14.5px/1.5 Inter,system-ui,sans-serif}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;background:radial-gradient(900px 500px at 85% -10%,rgba(124,108,255,.16),transparent 60%),radial-gradient(700px 400px at -10% 110%,rgba(176,108,255,.10),transparent 60%)}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.hide{display:none!important}
+.shell{max-width:1100px;margin:auto;padding:28px 28px 70px}
+.header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:26px}
+.brand{display:flex;align-items:center;gap:11px;font-size:16px;font-weight:800}
+.logo{width:36px;height:36px;border-radius:10px;background:var(--accg);display:grid;place-items:center;font-size:19px}
+.back{color:var(--mut);text-decoration:none;font-weight:600}.back:hover{color:var(--txt)}
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.top h1{font-size:26px;line-height:1.2;margin:0;font-weight:800;letter-spacing:-.02em}
+.top p{margin:5px 0 0;color:var(--mut)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:10px;padding:10px 16px;font:600 14px Inter,sans-serif;color:#fff;background:var(--accg);box-shadow:0 6px 20px -6px rgba(124,108,255,.6)}
+.btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn:disabled{opacity:.6;cursor:wait;transform:none}
+.btn.ghost{background:var(--panel2);box-shadow:none;border:1px solid var(--line);color:var(--txt)}
+.btn.danger{background:rgba(255,77,109,.12);color:#ff7d93;border:1px solid rgba(255,77,109,.3);box-shadow:none}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.search{position:relative;flex:1;min-width:220px}
+.search span{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--dim);font-size:18px}
+input,select,textarea{width:100%;border:1px solid var(--line);background:var(--bg2);color:var(--txt);border-radius:10px;padding:11px 13px;outline:0}
+.search input{padding-left:40px}
+input:focus,select:focus,textarea:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(124,108,255,.18)}
+select{width:auto;min-width:160px}
+.list{display:grid;gap:10px}
+.topic{display:flex;gap:13px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;cursor:pointer;transition:.15s}
+.topic:hover{border-color:var(--line2);transform:translateY(-1px)}
+.avatar{width:40px;height:40px;border-radius:50%;flex:none;background:var(--panel2);object-fit:cover}
+.topic-main{flex:1;min-width:0}
+.topic h3{font-size:16px;margin:0 0 5px;font-weight:700}
+.desc{color:#c5ccda;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta{display:flex;gap:12px;align-items:center;flex-wrap:wrap;color:var(--mut);font-size:12px;margin-top:9px}
+.cat{font-size:11px;font-weight:700;border-radius:6px;padding:3px 8px;background:rgba(124,108,255,.14);color:var(--acc2)}
+.empty{padding:55px 20px;text-align:center;border:1px dashed var(--line2);border-radius:var(--r);color:var(--mut)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:14px}
+.panel h2{font-size:21px;margin:0 0 5px}
+.sub{color:var(--mut);font-size:12px}
+.post{display:flex;gap:12px;padding:15px 0;border-bottom:1px solid var(--line)}
+.post:last-child{border-bottom:0}
+.post-content{flex:1;min-width:0}
+.post-head{display:flex;gap:9px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-bottom:6px}
+.post-head b{color:var(--txt);font-size:13px}
+.post p{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;color:#d5dae6}
+.form{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;max-width:760px}
+.field{margin-bottom:16px}
+label{display:block;font-size:13px;font-weight:600;margin-bottom:7px}
+textarea{min-height:150px;resize:vertical}
+.form-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:8px}
+.error{color:#ff7d93;font-size:13px;min-height:1em;margin-top:10px}
+.toast{position:fixed;right:20px;bottom:20px;background:var(--panel2);border:1px solid var(--line2);border-left:3px solid #34d399;border-radius:10px;padding:11px 16px;box-shadow:0 10px 30px #0006}
+@media(max-width:650px){.shell{padding:18px 14px 50px}.topic{padding:12px}.avatar{width:34px;height:34px}.panel,.form{padding:15px}.top h1{font-size:23px}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="header">
+    <div class="brand"><div class="logo">⌘</div><span>Staff Forum</span></div>
+    <a class="back" href="/">← Back to Mod Panel</a>
+  </header>
+
+  <main>
+    <section id="indexView">
+      <div class="top">
+        <div><h1>Staff Logs Forum</h1><p>Team reports, activity logs and system discussions.</p></div>
+        <button class="btn" id="newBtn">＋ New topic</button>
+      </div>
+      <div class="toolbar">
+        <div class="search"><span>⌕</span><input id="query" placeholder="Search topics, people or messages…"></div>
+        <select id="category">
+          <option value="All">All categories</option><option>Staff</option><option>Moderation</option>
+          <option>Server</option><option>Errors</option><option>System</option>
+        </select>
+      </div>
+      <div class="list" id="topicList"></div>
+    </section>
+
+    <section id="composeView" class="hide">
+      <div class="top"><div><h1>New topic</h1><p>Create a staff discussion or log report.</p></div></div>
+      <form class="form" id="composeForm">
+        <div class="field"><label for="title">Title</label><input id="title" maxlength="120" placeholder="e.g. Staff activity report" required></div>
+        <div class="field"><label for="newCategory">Category</label>
+          <select id="newCategory"><option>Staff</option><option>Moderation</option><option>Server</option><option>Errors</option><option>System</option></select>
+        </div>
+        <div class="field"><label for="message">Message / log details</label><textarea id="message" maxlength="5000" placeholder="Write your report or discussion…" required></textarea></div>
+        <div class="error" id="composeError"></div>
+        <div class="form-foot"><button type="button" class="btn ghost" id="cancelCompose">Cancel</button><button class="btn" id="publishBtn">Publish topic</button></div>
+      </form>
+    </section>
+
+    <section id="threadView" class="hide">
+      <button class="btn ghost" id="backBtn" style="margin-bottom:12px">← Back to topics</button>
+      <div id="threadContent"></div>
+      <form class="form" id="replyForm">
+        <div class="field"><label for="reply">Write a reply</label><textarea id="reply" maxlength="3000" placeholder="Add a comment…" required></textarea></div>
+        <div class="error" id="replyError"></div>
+        <div class="form-foot"><button class="btn" id="replyBtn">Send reply</button></div>
+      </form>
+    </section>
+  </main>
+</div>
+<div id="toastArea"></div>
+<script>
+const $ = id => document.getElementById(id);
+const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fallbackAvatar = "https://cdn.discordapp.com/embed/avatars/0.png";
+let me = null, threads = [], active = null;
+
+async function api(path, options = {}) {
+  const response = await fetch(path, {
+    credentials: "same-origin",
+    headers: options.body ? {"Content-Type":"application/json"} : undefined,
+    ...options,
+    body: options.body ? JSON.stringify(options.body) : undefined
+  });
+  let data = null;
+  try { data = await response.json(); } catch (_) {}
+  if (!response.ok) {
+    const error = new Error(data?.error || "Request failed (" + response.status + ")");
+    error.status = response.status;
+    throw error;
+  }
+  return data;
+}
+function toast(message) {
+  const node = document.createElement("div");
+  node.className = "toast";
+  node.textContent = message;
+  $("toastArea").appendChild(node);
+  setTimeout(() => node.remove(), 2800);
+}
+function date(value) {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleString(undefined,{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+}
+function show(view) {
+  ["indexView","composeView","threadView"].forEach(id => $(id).classList.toggle("hide", id !== view));
+}
+function renderList() {
+  const q = $("query").value.trim().toLowerCase();
+  const category = $("category").value;
+  const filtered = threads.filter(t => (category === "All" || t.category === category) &&
+    (!q || [t.title,t.body,t.author,t.category,...(t.replies || []).map(r => r.body+" "+r.author)].join(" ").toLowerCase().includes(q)));
+  if (!filtered.length) {
+    $("topicList").innerHTML = `<div class="empty">${threads.length ? "No topics match your search." : "No topics yet — start the first discussion."}</div>`;
+    return;
+  }
+  $("topicList").innerHTML = filtered.map(t => `
+    <article class="topic" data-id="${esc(t.id)}">
+      <img class="avatar" src="${esc(t.avatar || fallbackAvatar)}" alt="">
+      <div class="topic-main">
+        <h3>${esc(t.title)}</h3>
+        <div class="desc">${esc(t.body)}</div>
+        <div class="meta"><b>${esc(t.author)}</b><span class="cat">${esc(t.category)}</span>
+          <span>● ${(t.replies || []).length} replies</span><span>${date(t.updatedAt || t.at)}</span>
+        </div>
+      </div>
+    </article>`).join("");
+}
+async function load() {
+  $("topicList").innerHTML = `<div class="empty">Loading topics…</div>`;
+  try { threads = await api("/api/forum"); renderList(); }
+  catch (error) {
+    $("topicList").innerHTML = `<div class="empty">${esc(error.message)}${error.status === 401 ? " — sign in through the Mod Panel first." : ""}</div>`;
+  }
+}
+function openThread(id) {
+  active = threads.find(t => t.id === id);
+  if (!active) return;
+  show("threadView");
+  const canDelete = me && (me.role === "owner" || me.role === "admin" || active.uid === me.id);
+  const posts = [{author:active.author,avatar:active.avatar,body:active.body,at:active.at},...(active.replies || [])];
+  $("threadContent").innerHTML = `
+    <article class="panel">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
+        <span class="cat">${esc(active.category)}</span>
+        ${canDelete ? `<button class="btn danger" id="deleteBtn">Delete topic</button>` : ""}
+      </div>
+      <h2 style="margin-top:14px">${esc(active.title)}</h2>
+      <div class="sub">Started by ${esc(active.author)} · ${date(active.at)}</div>
+      ${posts.map(p => `<div class="post"><img class="avatar" src="${esc(p.avatar || fallbackAvatar)}" alt="">
+        <div class="post-content"><div class="post-head"><b>${esc(p.author)}</b><span>${date(p.at)}</span></div><p>${esc(p.body)}</p></div>
+      </div>`).join("")}
+    </article>`;
+  $("reply").value = "";
+  $("replyError").textContent = "";
+  const del = $("deleteBtn");
+  if (del) del.onclick = deleteThread;
+}
+async function deleteThread() {
+  if (!active || !confirm("Delete this topic and all its replies?")) return;
+  try {
+    await api("/api/forum?id="+encodeURIComponent(active.id),{method:"DELETE"});
+    toast("Topic deleted");
+    active = null;
+    await load();
+    show("indexView");
+  } catch (error) { toast(error.message); }
+}
+$("newBtn").onclick = () => { $("composeForm").reset(); $("composeError").textContent=""; show("composeView"); };
+$("cancelCompose").onclick = () => show("indexView");
+$("backBtn").onclick = () => { show("indexView"); };
+$("query").addEventListener("input",renderList);
+$("category").addEventListener("change",renderList);
+$("topicList").addEventListener("click",event => {
+  const card = event.target.closest("[data-id]");
+  if (card) openThread(card.dataset.id);
+});
+$("composeForm").addEventListener("submit",async event => {
+  event.preventDefault();
+  $("composeError").textContent="";
+  $("publishBtn").disabled=true;
+  try {
+    const created = await api("/api/forum",{method:"POST",body:{
+      title:$("title").value,category:$("newCategory").value,body:$("message").value
+    }});
+    threads.unshift(created);
+    toast("Topic published");
+    renderList();
+    show("indexView");
+  } catch(error) { $("composeError").textContent=error.message; }
+  finally { $("publishBtn").disabled=false; }
+});
+$("replyForm").addEventListener("submit",async event => {
+  event.preventDefault();
+  if (!active) return;
+  $("replyError").textContent="";
+  $("replyBtn").disabled=true;
+  try {
+    const updated = await api("/api/forum",{method:"POST",body:{id:active.id,body:$("reply").value}});
+    threads = threads.map(t => t.id === updated.id ? updated : t);
+    active = updated;
+    openThread(updated.id);
+    toast("Reply sent");
+  } catch(error) { $("replyError").textContent=error.message; }
+  finally { $("replyBtn").disabled=false; }
+});
+async function init() {
+  try {
+    const result = await api("/api/me");
+    me = result.user;
+    if (["pending","banned"].includes(me.role)) {
+      document.querySelector("main").innerHTML = `<div class="empty">Your account does not have access to the staff forum.</div>`;
+      return;
+    }
+    await load();
+  } catch(error) {
+    document.querySelector("main").innerHTML = `<div class="empty">Please <a href="/">sign in through the Mod Panel</a> to access the staff forum.</div>`;
+  }
+}
+init();
+</script>
+</body>
+</html>
