@@ -1,6 +1,6 @@
 {
   "name": "mod-logs",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "dependencies": { "ioredis": "^5.4.1" }
 }
