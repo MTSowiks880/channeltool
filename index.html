@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Journal des mods</title>
+<title>Mod Logs</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -52,37 +52,37 @@ dialog::backdrop{background:rgba(10,15,25,.6)}
 </head>
 <body>
 <div id="lock" hidden>
-  <h1 style="font-size:2rem">Espace des mods</h1>
-  <p class="sub">Entre le mot de passe de l'équipe.</p>
-  <label for="pw">Mot de passe</label><input id="pw" type="password" autocomplete="current-password">
+  <h1 style="font-size:2rem">Mod area</h1>
+  <p class="sub">Enter the team password.</p>
+  <label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password">
   <p id="lockErr" class="err" style="padding:8px 0 0;text-align:left" hidden></p>
-  <div class="row"><button class="btn" id="unlock">Entrer</button></div>
+  <div class="row"><button class="btn" id="unlock">Enter</button></div>
 </div>
 
 <main class="wrap" id="app" hidden>
   <header>
-    <div><h1>Journal des mods</h1><p class="sub">Tout ce qui a été fait, avec les preuves.</p></div>
-    <button class="btn" id="new">Créer un log</button>
+    <div><h1>Mod Logs</h1><p class="sub">Everything that was done, with proof.</p></div>
+    <button class="btn" id="new">Create a log</button>
   </header>
-  <input class="search" id="q" placeholder="Chercher un mod, une cible, une action…" aria-label="Rechercher">
+  <input class="search" id="q" placeholder="Search a mod, a target, an action…" aria-label="Search">
   <section class="feed" id="feed" aria-live="polite"></section>
 </main>
 
 <dialog id="dlg">
-  <h2>Nouveau log</h2>
-  <label for="mod">Ton nom de mod</label><input id="mod" maxlength="40">
-  <label for="target">Cible (joueur, jeu, fichier…)</label><input id="target" maxlength="80" placeholder="ex. slbr uncopylocked">
+  <h2>New log</h2>
+  <label for="mod">Your mod name</label><input id="mod" maxlength="40">
+  <label for="target">Target (player, game, file…)</label><input id="target" maxlength="80" placeholder="e.g. slbr uncopylocked">
   <label for="action">Action</label>
-  <select id="action"><option>Unlock</option><option>Ban</option><option>Avertissement</option><option>Suppression</option><option>Autre</option></select>
-  <label for="note">Détails</label><textarea id="note" rows="4" maxlength="2000" placeholder="Qu'est-ce qui s'est passé ?"></textarea>
+  <select id="action"><option>Unlock</option><option>Ban</option><option>Warning</option><option>Deletion</option><option>Other</option></select>
+  <label for="note">Details</label><textarea id="note" rows="4" maxlength="2000" placeholder="What happened?"></textarea>
   <label>Screenshots</label>
-  <div class="drop" id="drop" tabindex="0">Clique, glisse ou colle (Ctrl+V) des images — 4 max</div>
+  <div class="drop" id="drop" tabindex="0">Click, drag or paste (Ctrl+V) images — 4 max</div>
   <input type="file" id="file" accept="image/*" multiple hidden>
   <div class="prev" id="prev"></div>
   <p id="formErr" class="err" style="padding:8px 0 0;text-align:left" hidden></p>
-  <div class="row"><button class="btn ghost" id="cancel">Annuler</button><button class="btn" id="save">Enregistrer le log</button></div>
+  <div class="row"><button class="btn ghost" id="cancel">Cancel</button><button class="btn" id="save">Save log</button></div>
 </dialog>
-<dialog id="lightbox"><img alt="Screenshot agrandi"></dialog>
+<dialog id="lightbox"><img alt="Enlarged screenshot"></dialog>
 
 <script>
 const $=s=>document.querySelector(s);
@@ -93,7 +93,7 @@ const hue=s=>{let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return h};
 async function api(method,body){
   const r=await fetch("/api/logs",{method,headers:{"Content-Type":"application/json","x-mod-password":pw},body:body?JSON.stringify(body):undefined});
   const d=await r.json().catch(()=>({}));
-  if(!r.ok) throw Object.assign(new Error(d.error||("Erreur "+r.status+" : l'API ne répond pas correctement (vérifie que le dossier api est bien dans le repo).")),{status:r.status});
+  if(!r.ok) throw Object.assign(new Error(d.error||("Error "+r.status+": the API is not responding correctly (check that the api folder is in the repo).")),{status:r.status});
   return d;
 }
 async function load(){
@@ -112,13 +112,13 @@ function render(){
   <article class="log">
     <div class="top">
       <div class="av" style="background:hsl(${hue(l.mod)} 55% 42%)">${esc(l.mod[0].toUpperCase())}</div>
-      <div><div class="who">${esc(l.mod)}</div><div class="when">${new Date(l.at).toLocaleString("fr-FR",{dateStyle:"medium",timeStyle:"short"})}</div></div>
+      <div><div class="who">${esc(l.mod)}</div><div class="when">${new Date(l.at).toLocaleString("en-US",{dateStyle:"medium",timeStyle:"short"})}</div></div>
       <span class="tag">${esc(l.action)}</span>
     </div>
     <h2>${esc(l.target)}</h2>
     ${l.note?`<p class="note">${esc(l.note)}</p>`:""}
-    ${l.images&&l.images.length?`<div class="shots">${l.images.map(i=>`<img src="${i}" alt="Screenshot de ${esc(l.mod)}" loading="lazy">`).join("")}</div>`:""}
-  </article>`).join(""):`<p class="empty">${logs.length?"Aucun résultat.":"Aucun log pour l'instant. Clique sur « Créer un log »."}</p>`;
+    ${l.images&&l.images.length?`<div class="shots">${l.images.map(i=>`<img src="${i}" alt="Screenshot by ${esc(l.mod)}" loading="lazy">`).join("")}</div>`:""}
+  </article>`).join(""):`<p class="empty">${logs.length?"No results.":"No logs yet. Click “Create a log”."}</p>`;
 }
 $("#q").oninput=render;
 $("#feed").onclick=e=>{if(e.target.tagName==="IMG"){$("#lightbox img").src=e.target.src;$("#lightbox").showModal()}};
@@ -127,7 +127,7 @@ $("#lightbox").onclick=()=>$("#lightbox").close();
 $("#unlock").onclick=()=>{pw=$("#pw").value;localStorage.setItem("modpw",pw);load()};
 $("#pw").onkeydown=e=>{if(e.key==="Enter")$("#unlock").click()};
 
-// compression d'image pour rester léger
+// image compression to keep things light
 function shrink(file){return new Promise(res=>{
   const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{
     const k=Math.min(1,1200/Math.max(im.width,im.height)),c=document.createElement("canvas");
@@ -138,7 +138,7 @@ async function addFiles(files){
   drawPrev();
 }
 function drawPrev(){
-  $("#prev").innerHTML=imgs.map((s,i)=>`<div><img src="${s}" alt="Aperçu"><button data-i="${i}" aria-label="Retirer">×</button></div>`).join("");
+  $("#prev").innerHTML=imgs.map((s,i)=>`<div><img src="${s}" alt="Preview"><button data-i="${i}" aria-label="Remove">×</button></div>`).join("");
 }
 $("#prev").onclick=e=>{if(e.target.dataset.i){imgs.splice(+e.target.dataset.i,1);drawPrev()}};
 $("#drop").onclick=()=>$("#file").click();
@@ -155,7 +155,7 @@ $("#new").onclick=()=>{
 $("#cancel").onclick=()=>$("#dlg").close();
 $("#save").onclick=async()=>{
   const mod=$("#mod").value.trim(),target=$("#target").value.trim();
-  if(!mod||!target){$("#formErr").textContent="Mets ton nom et la cible.";$("#formErr").hidden=false;return}
+  if(!mod||!target){$("#formErr").textContent="Enter your name and the target.";$("#formErr").hidden=false;return}
   localStorage.setItem("modname",mod);$("#save").disabled=true;
   try{
     const l=await api("POST",{mod,target,action:$("#action").value,note:$("#note").value,images:imgs});
