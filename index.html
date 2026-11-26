@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Mod Panel</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -395,6 +395,95 @@ kbd{background:var(--bg2);border:1px solid var(--line2);border-radius:6px;paddin
   .mnav .nav{flex:1 0 auto;min-width:58px}
   .set-sec{padding:4px 16px 6px}
 }
+
+
+/* === Mobile viewport compatibility patch (kept in index.html) === */
+:root { --mobile-vh: 1vh; }
+html {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  width: 100%;
+  min-width: 0;
+  min-height: calc(var(--mobile-vh) * 100);
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+}
+.app { min-width: 0; min-height: calc(var(--mobile-vh) * 100); }
+main { min-width: 0; }
+@supports (height: 100dvh) {
+  body, .app { min-height: 100dvh; }
+}
+img, video, canvas, svg { max-width: 100%; }
+button, input, select, textarea { max-width: 100%; }
+input, select, textarea { font-size: 16px; }
+.modal-bg, .profile-pop-bg, .lb {
+  padding-top: max(16px, env(safe-area-inset-top));
+  padding-right: max(16px, env(safe-area-inset-right));
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  padding-left: max(16px, env(safe-area-inset-left));
+}
+.toasts {
+  right: max(12px, env(safe-area-inset-right));
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  left: auto;
+  max-width: calc(100vw - 24px);
+}
+@media (max-width: 760px) {
+  html, body { min-height: 100%; }
+  .app { display: block; min-height: calc(var(--mobile-vh) * 100); }
+  main {
+    width: 100%;
+    max-width: none;
+    padding:
+      max(18px, env(safe-area-inset-top))
+      max(14px, env(safe-area-inset-right))
+      calc(112px + env(safe-area-inset-bottom))
+      max(14px, env(safe-area-inset-left));
+  }
+  .mnav {
+    bottom: 0;
+    padding:
+      8px max(6px, env(safe-area-inset-right))
+      calc(8px + env(safe-area-inset-bottom))
+      max(6px, env(safe-area-inset-left));
+  }
+  .mnav .nav { min-width: 0; min-height: 54px; }
+  .stats, .grid2 { min-width: 0; }
+  .stat, .card, .log, .forum-layout, .forum-chat, .forum-side {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .bar, .top, .wg-head { min-width: 0; }
+  .search { min-width: min(100%, 180px); }
+  .log .h { padding-right: 34px; }
+  .modal-bg > *, .profile-pop-bg > * {
+    width: min(100%, 720px);
+    max-height: calc(var(--mobile-vh) * 100 - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+@media (max-width: 380px) {
+  main { padding-left: 12px; padding-right: 12px; }
+  .stats { grid-template-columns: 1fr; }
+  .top { align-items: flex-start; }
+  .top h2 { font-size: 20px; }
+  .stat { padding: 14px 16px; }
+  .bar { gap: 8px; }
+  .chips { width: 100%; }
+  .chip { padding: 7px 11px; }
+  .acts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .card { padding: 15px; }
+}
+@media (hover: none) and (pointer: coarse) {
+  .btn:hover, .nav:hover, .chip:hover, .act-opt:hover { transform: none; }
+  .btn, .icon-btn, .chip, .act-opt { touch-action: manipulation; }
+}
+
 </style>
 </head>
 <body>
@@ -1928,5 +2017,27 @@ $("reviewList").addEventListener("click", async (e) => {
 
 init();
 </script>
+
+<script>
+/* Keep the visible viewport height accurate on mobile Safari/Chrome,
+   where the browser bars can change the usable height while scrolling. */
+(function () {
+  function updateMobileViewport() {
+    var height = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    if (height && Number.isFinite(height)) {
+      document.documentElement.style.setProperty('--mobile-vh', (height * 0.01) + 'px');
+    }
+  }
+  updateMobileViewport();
+  window.addEventListener('resize', updateMobileViewport, { passive: true });
+  window.addEventListener('orientationchange', function () {
+    window.setTimeout(updateMobileViewport, 120);
+  }, { passive: true });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', updateMobileViewport, { passive: true });
+  }
+})();
+</script>
+
 </body>
 </html>
