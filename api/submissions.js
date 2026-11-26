@@ -58,7 +58,11 @@ module.exports = handle(async (req, res, redis) => {
       id: newId(), quizId: quiz.id, quizTitle: quiz.title, passScore: quiz.passScore,
       uid: u.id, name: u.name, avatar: u.avatar,
       questions: quiz.questions, answers, correct, choiceTotal, pct, hasText,
-      status, auto: !hasText, feedback: "", timeUp, timeLimit: quiz.timeLimit || 0, at: new Date().toISOString(),
+      status, auto: !hasText, feedback: "", timeUp, timeLimit: quiz.timeLimit || 0,
+      // How many times the member left the page during the quiz, and for how long (seconds).
+      leaves: Math.min(9999, Math.max(0, parseInt(b.leaves, 10) || 0)),
+      awaySec: Math.min(86400, Math.max(0, parseInt(b.awaySec, 10) || 0)),
+      at: new Date().toISOString(),
     };
     await redis.hset("subs", sub.id, JSON.stringify(sub));
     return res.status(201).json({ id: sub.id, status, pct });
