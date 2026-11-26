@@ -327,6 +327,15 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
 .profile-pop-meta{color:var(--mut);font-size:12px;margin-top:5px}
 .profile-pop-close{float:right;margin-top:12px}
 
+.profile-pop-status{margin-top:8px;font-size:13px;color:#d5dae6}
+.profile-pop-bio{margin:12px 0 0;padding:10px 12px;background:var(--panel2);border-radius:10px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;color:#cdd3e1}
+.profile-pop-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.profile-pop-stats div{background:var(--panel2);border-radius:10px;padding:9px 11px}
+.profile-pop-stats b{display:block;font-size:16px}.profile-pop-stats span{font-size:11.5px;color:var(--mut)}
+.profile-pop-actions{display:flex;gap:8px;margin-top:14px}
+.me{cursor:pointer}
+.pe label{display:block;font-weight:600;font-size:12.5px;margin:12px 0 5px;color:var(--mut)}
+.pe textarea{min-height:80px}
 </style>
 </head>
 <body>
@@ -394,7 +403,7 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
     <button class="nav adminOnly hide" data-view="review"><svg><use href="#i-check"/></svg>Review<span class="count revCount hide"></span></button>
     <button class="nav adminOnly hide" data-view="members"><svg><use href="#i-users"/></svg>Members<span class="count pendCount hide"></span></button>
     <div class="side-sp"></div>
-    <div class="me">
+    <div class="me" id="meCard" title="My profile">
       <div class="ban" id="meBan"></div>
       <div class="in">
         <img id="meAv" alt="">
@@ -872,27 +881,85 @@ function insertAtCursor(field, value) {
   field.focus();
   field.dispatchEvent(new Event("input", { bubbles: true }));
 }
-function showProfileCard(data) {
+const pfAccent = (u) => u.accent || u.color || "";
+function pfDate(t) { return t ? new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "—"; }
+async function showProfileCard(data) {
   let profile = {};
   try { profile = typeof data === "string" ? JSON.parse(data) : data; } catch (_) { return; }
-  const known = (typeof allUsers !== "undefined" ? allUsers : []).find(u => u.id === profile.id) || {};
-  const user = { ...known, ...profile };
   const overlay = document.createElement("div");
   overlay.className = "profile-pop-bg";
-  overlay.innerHTML = `<div class="profile-pop" role="dialog" aria-modal="true">
-    <div class="profile-pop-banner" style="${user.banner ? `background-image:url('${esc(user.banner)}')` : user.color ? `background:${esc(user.color)}` : ""}"></div>
-    <div class="profile-pop-content">
-      <button class="icon-btn profile-pop-close" type="button" aria-label="Fermer">×</button>
-      <img class="profile-pop-avatar" src="${esc(user.avatar || "https://cdn.discordapp.com/embed/avatars/0.png")}" alt="">
-      <div class="profile-pop-name">${esc(user.name || "Membre")}</div>
-      <div class="profile-pop-meta">${user.role ? `<span class="role ${esc(user.role)}">${esc(user.role)}</span>` : "Membre"}${user.username ? ` · @${esc(user.username)}` : ""}</div>
-      ${user.bio ? `<p class="profile-pop-meta">${esc(user.bio)}</p>` : ""}
-      ${user.id ? `<div class="profile-pop-meta">ID : ${esc(user.id)}</div>` : ""}
-    </div></div>`;
+  document.body.appendChild(overlay);
   const close = () => overlay.remove();
   overlay.addEventListener("click", e => { if (e.target === overlay || e.target.closest(".profile-pop-close")) close(); });
-  document.body.appendChild(overlay);
+  const paint = (user, info) => {
+    const own = me && user.id === me.id, acc = pfAccent(user);
+    overlay.innerHTML = `<div class="profile-pop" role="dialog" aria-modal="true">
+      <div class="profile-pop-banner" style="${user.banner ? `background-image:url('${esc(user.banner)}')` : acc ? `background:${esc(acc)}` : ""}"></div>
+      <div class="profile-pop-content">
+        <button class="icon-btn profile-pop-close" type="button" aria-label="Close">×</button>
+        <img class="profile-pop-avatar" src="${esc(user.avatar || "https://cdn.discordapp.com/embed/avatars/0.png")}" alt="" style="${acc ? `border-color:${esc(acc)}` : ""}">
+        <div class="profile-pop-name">${esc(user.name || "Member")}</div>
+        <div class="profile-pop-meta">${user.role ? `<span class="role ${esc(user.role)}">${esc(user.role)}</span>` : ""}${user.username ? ` · @${esc(user.username)}` : ""}</div>
+        ${user.status ? `<div class="profile-pop-status">💬 ${esc(user.status)}</div>` : ""}
+        ${user.bio ? `<div class="profile-pop-bio">${esc(user.bio)}</div>` : ""}
+        ${info ? `<div class="profile-pop-stats">
+          <div><b>${info.logs}</b><span>Logs</span></div>
+          <div><b>${info.lastLog ? pfDate(info.lastLog) : "—"}</b><span>Last log</span></div>
+          <div><b>${pfDate(user.joined)}</b><span>Member since</span></div>
+          <div><b>${user.seen ? pfDate(user.seen) : "—"}</b><span>Last login</span></div>
+        </div>` : '<div class="profile-pop-meta" style="margin-top:12px">Loading…</div>'}
+        ${own ? `<div class="profile-pop-actions"><button class="btn sm" type="button" data-edit-profile>✏️ Edit profile</button></div>` : ""}
+      </div></div>`;
+    const ed = overlay.querySelector("[data-edit-profile]");
+    if (ed) ed.onclick = () => { close(); editProfile(); };
+  };
+  paint(profile, null);
+  if (!profile.id) return;
+  try {
+    const r = await api("/api/me?id=" + encodeURIComponent(profile.id));
+    if (overlay.isConnected) paint({ ...profile, ...r.user }, r);
+  } catch (e) {
+    if (overlay.isConnected) paint(profile, null), overlay.querySelector(".profile-pop-content").insertAdjacentHTML("beforeend", `<div class="profile-pop-meta">${esc(e.message)}</div>`);
+  }
 }
+function editProfile() {
+  const bg = document.createElement("div");
+  bg.className = "modal-bg";
+  bg.innerHTML = `<div class="modal pe"><h3>Edit profile</h3>
+    <label>Status</label><input id="peStatus" maxlength="60" placeholder="What are you up to?" value="${esc(me.status || "")}">
+    <label>About me <span id="peCount"></span></label><textarea id="peBio" maxlength="200" placeholder="A few words about you…">${esc(me.bio || "")}</textarea>
+    <label>Profile color</label>
+    <div style="display:flex;gap:10px;align-items:center"><input type="color" id="peColor" style="width:56px;height:38px;padding:2px" value="${esc(me.accent || me.color || "#7c6cff")}">
+    <button class="btn ghost sm" type="button" id="peReset">Use Discord color</button></div>
+    <div class="r" style="margin-top:20px"><button class="btn ghost" type="button" id="peCancel">Cancel</button><button class="btn" type="button" id="peSave">Save</button></div></div>`;
+  document.body.appendChild(bg);
+  const g = (id) => bg.querySelector("#" + id);
+  let accent = me.accent || "";
+  const count = () => { g("peCount").textContent = "(" + g("peBio").value.length + "/200)"; };
+  count(); g("peBio").oninput = count;
+  g("peColor").oninput = () => { accent = g("peColor").value; };
+  g("peReset").onclick = () => { accent = ""; g("peColor").value = me.color || "#7c6cff"; toast("Discord color will be used"); };
+  g("peCancel").onclick = () => bg.remove();
+  bg.addEventListener("mousedown", (e) => { if (e.target === bg) bg.remove(); });
+  g("peSave").onclick = async () => {
+    g("peSave").disabled = true;
+    try {
+      me = (await api("/api/me", { method: "POST", body: { bio: g("peBio").value, status: g("peStatus").value, accent } })).user;
+      paintMeCard(); bg.remove(); toast("Profile saved");
+    } catch (err) { toast(err.message, true); g("peSave").disabled = false; }
+  };
+}
+function paintMeCard() {
+  const el = $("meBan"), acc = pfAccent(me);
+  el.style.background = ""; el.style.backgroundImage = "";
+  if (me.banner) el.style.backgroundImage = `url("${me.banner}")`;
+  else if (acc) el.style.background = acc;
+}
+$("meCard").addEventListener("click", (e) => {
+  if (e.target.closest("a")) return;
+  showProfileCard({ id: me.id, name: me.name, avatar: me.avatar, banner: me.banner, role: me.role });
+});
+
 document.addEventListener("click", e => {
   const profile = e.target.closest("[data-profile]");
   if (profile) { showProfileCard(profile.dataset.profile); return; }
@@ -951,8 +1018,7 @@ async function init() {
   $("meName").textContent = me.name;
   $("meRole").textContent = me.role;
   $("meRole").className = "role " + me.role;
-  if (me.banner) $("meBan").style.backgroundImage = `url("${me.banner}")`;
-  else if (me.color) $("meBan").style.background = me.color;
+  paintMeCard();
   admin = me.role === "owner" || me.role === "admin";
   const canMentionEveryone = ["owner", "admin", "mod"].includes(me.role);
   document.querySelectorAll(".staff-mention").forEach((x) => x.classList.toggle("hide", !canMentionEveryone));
@@ -1090,7 +1156,7 @@ function renderLog(l, i) {
   return `<div class="log" style="--c:${a.c};animation-delay:${Math.min(i, 10) * 25}ms">
     <img class="av" src="${esc(l.avatar || "https://cdn.discordapp.com/embed/avatars/0.png")}" alt="">
     <div class="b">
-      <div class="h"><span class="mod">${esc(l.mod)}</span><span class="badge">${ico(a.i)}${esc(l.action)}</span><span class="time">${time}</span></div>
+      <div class="h"><button class="mod profile-trigger" type="button" data-profile='${esc(JSON.stringify({ id: l.uid, name: l.mod, avatar: l.avatar }))}'>${esc(l.mod)}</button><span class="badge">${ico(a.i)}${esc(l.action)}</span><span class="time">${time}</span></div>
       <div class="target">${ico("user")}${esc(l.target)}</div>
       ${l.note ? `<div class="note">${esc(l.note)}</div>` : ""}
       ${(l.images || []).length ? `<div class="thumbs">${l.images.map((s) => `<img src="${esc(s)}" alt="" data-lb>`).join("")}</div>` : ""}
@@ -1278,7 +1344,7 @@ function renderUsers() {
       <div class="ban" style="${ban}"></div>
       <div class="in">
         <img src="${esc(u.avatar)}" alt="">
-        <div class="nm">${esc(u.name)} <span class="role ${esc(u.role)}">${esc(u.role)}</span></div>
+        <div class="nm"><button class="profile-trigger" type="button" data-profile='${esc(JSON.stringify({ id: u.id, name: u.name, avatar: u.avatar }))}'>${esc(u.name)}</button> <span class="role ${esc(u.role)}">${esc(u.role)}</span></div>
         <div class="un">@${esc(u.username)}${u.seen ? " · seen " + new Date(u.seen).toLocaleDateString() : ""}</div>
         ${btns.length ? `<div class="row">${btns.map(([a, t, c]) => `<button class="btn sm ${c}" data-u="${esc(u.id)}" data-a="${a}" data-n="${esc(u.name)}">${t}</button>`).join("")}</div>` : ""}
       </div>
