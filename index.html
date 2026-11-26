@@ -808,6 +808,52 @@ svg.ic.big{width:1.35em;height:1.35em}
 .pack{height:auto;min-height:0}
 .set-row.col{flex-wrap:nowrap}
 
+
+/* Staff leaderboard */
+.lb-periods{display:flex;gap:7px;flex-wrap:wrap}
+.lb-table-wrap{max-width:none;padding:20px;margin-top:18px}
+.lb-table-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.lb-table-head b{font-size:16px}
+.lb-table-head .mut{font-size:12px;margin-top:3px}
+.lb-podium{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:8px 0 18px;align-items:end}
+.lb-podium-card{position:relative;min-width:0;text-align:center;padding:20px 12px 16px;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.lb-podium-card.first{border-color:rgba(245,181,68,.45);background:linear-gradient(180deg,rgba(245,181,68,.10),var(--panel) 70%);padding-top:27px}
+.lb-podium-card.second{border-color:rgba(190,200,220,.25)}
+.lb-podium-card.third{border-color:rgba(196,128,85,.3)}
+.lb-medal{font-size:22px;margin-bottom:8px}
+.lb-avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;background:var(--panel2);border:2px solid var(--line2);display:block;margin:0 auto 8px}
+.lb-podium-card.first .lb-avatar{width:58px;height:58px;border-color:var(--warn)}
+.lb-name{font-weight:750;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-count{font-size:24px;font-weight:850;letter-spacing:-.04em;margin-top:5px}
+.lb-count-label{font-size:11px;color:var(--mut)}
+.lb-row{display:grid;grid-template-columns:42px minmax(0,1.4fr) minmax(150px,1fr) 76px;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line)}
+.lb-row:last-child{border-bottom:0}
+.lb-rank{font-weight:800;color:var(--mut);text-align:center}
+.lb-person{display:flex;align-items:center;gap:10px;min-width:0}
+.lb-person .lb-avatar{width:36px;height:36px;margin:0;flex:none}
+.lb-person-name{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-breakdown{display:flex;gap:5px;flex-wrap:wrap}
+.lb-tag{font-size:10px;font-weight:700;border-radius:6px;padding:3px 6px;background:var(--panel2);color:var(--mut)}
+.lb-tag.warn{color:var(--warn)}.lb-tag.mute{color:var(--mute)}.lb-tag.kick{color:var(--kick)}.lb-tag.ban{color:var(--ban)}
+.lb-total{text-align:right;font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+.lb-empty{padding:34px 14px;text-align:center;color:var(--mut)}
+.lb-footnote{font-size:11.5px;margin:10px 4px}
+@media(max-width:650px){
+  .lb-podium{gap:7px}
+  .lb-podium-card{padding:15px 7px 12px}
+  .lb-podium-card.first{padding-top:21px}
+  .lb-avatar{width:40px;height:40px}
+  .lb-podium-card.first .lb-avatar{width:48px;height:48px}
+  .lb-name{font-size:12px}
+  .lb-count{font-size:20px}
+  .lb-row{grid-template-columns:28px minmax(0,1fr) 54px;gap:8px;padding:11px 0}
+  .lb-breakdown{grid-column:2/4;grid-row:2;margin-top:-3px}
+  .lb-total{grid-column:3;grid-row:1}
+  .lb-table-wrap{padding:14px}
+  .lb-table-head{align-items:flex-start}
+  #leaderboardUpdated{font-size:10px;text-align:right}
+}
+
 </style>
 </head>
 <body>
@@ -880,6 +926,7 @@ svg.ic.big{width:1.35em;height:1.35em}
     <button class="nav on" data-view="logs"><svg><use href="#i-list"/></svg>Logs</button>
     <button class="nav" data-view="warns"><svg><use href="#i-warn"/></svg>Warns</button>
     <button class="nav" data-view="analytics"><svg><use href="#i-chart"/></svg>Analytics</button>
+    <button class="nav" data-view="leaderboard"><svg><use href="#i-star"/></svg>Staff leaderboard</button>
     <button class="nav" data-view="new"><svg><use href="#i-plus"/></svg>New log</button>
     <button class="nav" data-view="quizzes"><svg><use href="#i-quiz"/></svg>Quizzes</button>
     <button class="nav" data-view="forums"><svg><use href="#i-users"/></svg>Forums</button>
@@ -1087,6 +1134,25 @@ svg.ic.big{width:1.35em;height:1.35em}
       <div class="members" id="users"></div>
     </section>
 
+    <!-- Staff leaderboard -->
+    <section id="v-leaderboard" class="hide">
+      <div class="top">
+        <div><h2>Staff leaderboard</h2><p class="mut">Team activity ranked by moderation logs.</p></div>
+        <div class="lb-periods" id="leaderboardPeriods">
+          <button class="chip" data-lb-period="7">7 days</button>
+          <button class="chip on" data-lb-period="30">30 days</button>
+          <button class="chip" data-lb-period="all">All time</button>
+        </div>
+      </div>
+      <div class="stats" id="leaderboardStats"></div>
+      <div id="leaderboardPodium"></div>
+      <div class="card lb-table-wrap">
+        <div class="lb-table-head"><div><b>Staff rankings</b><div class="mut">Based on recorded moderation actions</div></div><span class="mut" id="leaderboardUpdated"></span></div>
+        <div id="leaderboardRows"></div>
+      </div>
+      <p class="mut lb-footnote">Only actions present in the moderation logs are counted. The leaderboard uses the latest 200 logs available to this panel.</p>
+    </section>
+
     <!-- Settings view -->
     <section id="v-settings" class="hide">
       <div class="top"><div><h2>Settings</h2><p class="mut">Sounds, look and behaviour. Saved on this device only.</p></div></div>
@@ -1099,6 +1165,7 @@ svg.ic.big{width:1.35em;height:1.35em}
     <button class="nav on" data-view="logs"><svg><use href="#i-list"/></svg>Logs</button>
     <button class="nav" data-view="warns"><svg><use href="#i-warn"/></svg>Warns</button>
     <button class="nav" data-view="analytics"><svg><use href="#i-chart"/></svg>Stats</button>
+    <button class="nav" data-view="leaderboard"><svg><use href="#i-star"/></svg>Staff</button>
     <button class="nav" data-view="new"><svg><use href="#i-plus"/></svg>New</button>
     <button class="nav" data-view="quizzes"><svg><use href="#i-quiz"/></svg>Quiz</button>
     <button class="nav" data-view="forums"><svg><use href="#i-users"/></svg>Forums</button>
@@ -1123,6 +1190,7 @@ const ACTIONS = {
 const act = (a) => ACTIONS[a] || ACTIONS.Other;
 const ico = (n) => `<svg><use href="#i-${n}"/></svg>`;
 let me = null, admin = false, allLogs = [], allUsers = [], filter = "All", userTab = "all", pickedAction = "Warn", images = [];
+let leaderboardPeriod = "30";
 
 async function api(path, opts = {}) {
   const r = await fetch(path, {
@@ -1168,12 +1236,12 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.q
 function go(view) {
   if (view !== "take" && typeof stopTimer === "function" && qTick) stopTimer();
   if (view !== "take" && typeof stopWatch === "function" && watch) stopWatch(false);
-  ["logs", "warns", "analytics", "new", "members", "quizzes", "take", "builder", "review", "forums", "announcements", "settings"].forEach((v) => { const el = $("v-" + v); if (el) el.classList.toggle("hide", v !== view); });
+  ["logs", "warns", "analytics", "leaderboard", "new", "members", "quizzes", "take", "builder", "review", "forums", "announcements", "settings"].forEach((v) => { const el = $("v-" + v); if (el) el.classList.toggle("hide", v !== view); });
   const navView = ["take", "builder"].includes(view) ? "quizzes" : view;
   document.querySelectorAll(".nav[data-view]").forEach((n) => n.classList.toggle("on", n.dataset.view === navView));
   if (view === "quizzes") loadQuizzes();
   if (view === "review") loadSubs();
-  if (view === "logs" || view === "warns") loadLogs();
+  if (view === "logs" || view === "warns" || view === "leaderboard") loadLogs();
   if (view === "analytics") loadAnalytics();
   if (view === "members") loadUsers();
   if (view === "forums") loadForums();
@@ -1814,7 +1882,7 @@ async function loadLogs() {
   if (!allLogs.length) $("logs").innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
   try {
     allLogs = await api("/api/logs");
-    renderStats(); renderLogs(); renderWarns();
+    renderStats(); renderLogs(); renderWarns(); renderLeaderboard();
   } catch (e) { $("logs").innerHTML = `<div class="empty">${ico("warn")}<div>${esc(e.message)}</div></div>`; }
 }
 function renderStats() {
@@ -1833,6 +1901,74 @@ function renderStats() {
   $("stats").innerHTML = s.map(([k, v, i, c, sm]) =>
     `<div class="stat" style="--c:${c}"><div class="k" style="color:${c}">${ico(i)}<span class="mut">${k}</span></div><div class="v ${sm ? "small" : ""}" title="${esc(v)}">${esc(v)}</div></div>`).join("");
 }
+function renderLeaderboard() {
+  const now = Date.now();
+  const cutoff = leaderboardPeriod === "all" ? 0 : now - Number(leaderboardPeriod) * 86400000;
+  const logs = allLogs.filter((l) => {
+    const time = new Date(l.at).getTime();
+    return Number.isFinite(time) && time >= cutoff;
+  });
+  const staff = new Map();
+  logs.forEach((l) => {
+    const key = String(l.uid || l.mod || "unknown");
+    if (!staff.has(key)) staff.set(key, {
+      id: key, name: l.mod || "Unknown moderator", avatar: l.avatar || "",
+      total: 0, actions: {}, last: 0
+    });
+    const person = staff.get(key);
+    person.total++;
+    person.actions[l.action || "Other"] = (person.actions[l.action || "Other"] || 0) + 1;
+    person.last = Math.max(person.last, new Date(l.at).getTime() || 0);
+    if (!person.avatar && l.avatar) person.avatar = l.avatar;
+  });
+  const ranked = [...staff.values()].sort((a, b) => b.total - a.total || b.last - a.last || a.name.localeCompare(b.name));
+  const totalActions = logs.length;
+  const activeStaff = ranked.length;
+  const top = ranked[0];
+  const average = activeStaff ? (totalActions / activeStaff).toFixed(1) : "0";
+  $("leaderboardStats").innerHTML = [
+    ["Recorded actions", totalActions, "chart", "var(--acc)"],
+    ["Active staff", activeStaff, "users", "var(--mute)"],
+    ["Team average", average, "activity", "var(--warn)"],
+    ["Top moderator", top ? top.name : "—", "star", "var(--ban)", true]
+  ].map(([label, value, icon, color, small]) =>
+    `<div class="stat" style="--c:${color}"><div class="k" style="color:${color}">${ico(icon)}<span class="mut">${label}</span></div><div class="v ${small ? "small" : ""}" title="${esc(value)}">${esc(value)}</div></div>`
+  ).join("");
+  const podium = ranked.slice(0, 3);
+  const medals = ["🥇", "🥈", "🥉"];
+  const classes = ["first", "second", "third"];
+  const order = podium.length === 3 ? [1, 0, 2] : podium.map((_, i) => i);
+  $("leaderboardPodium").innerHTML = podium.length ? `<div class="lb-podium">${order.map((idx) => {
+    const p = podium[idx];
+    return `<div class="lb-podium-card ${classes[idx]}"><div class="lb-medal">${medals[idx]}</div>
+      ${p.avatar ? `<img class="lb-avatar" src="${esc(p.avatar)}" alt="">` : `<div class="lb-avatar"></div>`}
+      <div class="lb-name" title="${esc(p.name)}">${esc(p.name)}</div>
+      <div class="lb-count">${p.total}</div><div class="lb-count-label">moderation actions</div>
+    </div>`;
+  }).join("")}</div>` : "";
+  const actionOrder = ["Warn", "Mute", "Kick", "Ban", "Unban", "Other"];
+  $("leaderboardRows").innerHTML = ranked.length ? ranked.map((p, i) => {
+    const breakdown = actionOrder.filter((a) => p.actions[a]).map((a) =>
+      `<span class="lb-tag ${a.toLowerCase()}">${esc(a)} ${p.actions[a]}</span>`
+    ).join("");
+    return `<div class="lb-row">
+      <div class="lb-rank">#${i + 1}</div>
+      <div class="lb-person">${p.avatar ? `<img class="lb-avatar" src="${esc(p.avatar)}" alt="">` : `<div class="lb-avatar"></div>`}
+        <div class="lb-person-name" title="${esc(p.name)}">${esc(p.name)}</div></div>
+      <div class="lb-breakdown">${breakdown}</div>
+      <div class="lb-total">${p.total}</div>
+    </div>`;
+  }).join("") : `<div class="lb-empty">${ico("star")}<div>No moderation activity for this period yet.</div></div>`;
+  $("leaderboardUpdated").textContent = "Updated " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  document.querySelectorAll("[data-lb-period]").forEach((b) => b.classList.toggle("on", b.dataset.lbPeriod === leaderboardPeriod));
+}
+$("leaderboardPeriods").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-lb-period]");
+  if (!b) return;
+  leaderboardPeriod = b.dataset.lbPeriod;
+  renderLeaderboard();
+});
+
 function dayLabel(d) {
   const x = new Date(d), n = new Date();
   const y = new Date(); y.setDate(n.getDate() - 1);
