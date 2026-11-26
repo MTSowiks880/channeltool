@@ -4,7 +4,7 @@ const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2
 
 // What non-admins get: no correct answers.
 const strip = (q) => ({
-  id: q.id, title: q.title, description: q.description, passScore: q.passScore, at: q.at,
+  id: q.id, title: q.title, description: q.description, passScore: q.passScore, timeLimit: q.timeLimit || 0, at: q.at,
   questions: q.questions.map((x) => ({ type: x.type, q: x.q, options: x.options || [] })),
 });
 
@@ -12,6 +12,8 @@ function clean(b) {
   const title = clip(b.title, 100);
   if (!title) return { error: "Title is required." };
   const passScore = Math.min(100, Math.max(0, parseInt(b.passScore, 10) || 0));
+  // Time limit in minutes, 0 = no limit (max 4 hours).
+  const timeLimit = Math.min(240, Math.max(0, parseInt(b.timeLimit, 10) || 0));
   const src = Array.isArray(b.questions) ? b.questions : [];
   if (src.length < 1 || src.length > 30) return { error: "A quiz needs between 1 and 30 questions." };
   const questions = [];
@@ -28,7 +30,7 @@ function clean(b) {
     if (correct < 0 || correct >= options.length) return { error: `Question ${i + 1}: pick the correct answer.` };
     questions.push({ type: "choice", q, options, correct });
   }
-  return { title, description: clip(b.description, 500), passScore, questions };
+  return { title, description: clip(b.description, 500), passScore, timeLimit, questions };
 }
 
 module.exports = handle(async (req, res, redis) => {

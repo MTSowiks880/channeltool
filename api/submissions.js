@@ -32,20 +32,23 @@ module.exports = handle(async (req, res, redis) => {
     if (mine.some((s) => s.status === "passed")) return res.status(409).json({ error: "You already passed this quiz." });
 
     const given = Array.isArray(b.answers) ? b.answers : [];
+    // When the timer runs out, the quiz is sent as is: blank answers are allowed (and count as wrong).
+    const timeUp = !!b.timeUp && (quiz.timeLimit || 0) > 0;
     const answers = [];
     let correct = 0, choiceTotal = 0, hasText = false;
     for (let i = 0; i < quiz.questions.length; i++) {
       const q = quiz.questions[i], a = given[i];
       if (q.type === "choice") {
         choiceTotal++;
-        if (!Number.isInteger(a) || a < 0 || a >= q.options.length) return res.status(400).json({ error: "Answer every question." });
-        if (a === q.correct) correct++;
-        answers.push(a);
+        const ok = Number.isInteger(a) && a >= 0 && a < q.options.length;
+        if (!ok && !timeUp) return res.status(400).json({ error: "Answer every question." });
+        if (ok && a === q.correct) correct++;
+        answers.push(ok ? a : -1);
       } else {
         hasText = true;
         const t = clip(a, 2000);
-        if (!t) return res.status(400).json({ error: "Answer every question." });
-        answers.push(t);
+        if (!t && !timeUp) return res.status(400).json({ error: "Answer every question." });
+        answers.push(t || "(no answer — time ran out)");
       }
     }
     const pct = choiceTotal ? Math.round((correct / choiceTotal) * 100) : null;
@@ -55,7 +58,7 @@ module.exports = handle(async (req, res, redis) => {
       id: newId(), quizId: quiz.id, quizTitle: quiz.title, passScore: quiz.passScore,
       uid: u.id, name: u.name, avatar: u.avatar,
       questions: quiz.questions, answers, correct, choiceTotal, pct, hasText,
-      status, auto: !hasText, feedback: "", at: new Date().toISOString(),
+      status, auto: !hasText, feedback: "", timeUp, timeLimit: quiz.timeLimit || 0, at: new Date().toISOString(),
     };
     await redis.hset("subs", sub.id, JSON.stringify(sub));
     return res.status(201).json({ id: sub.id, status, pct });
