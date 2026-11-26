@@ -252,6 +252,16 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
   .card{padding:18px}
 }
 
+/* warns */
+.wgroup{margin-bottom:20px}
+.wg-head{display:flex;align-items:center;gap:10px;margin:0 0 8px;flex-wrap:wrap}
+.wg-name{display:flex;align-items:center;gap:8px;font-weight:800;font-size:16px;flex:1;min-width:140px}
+.wg-name svg{width:16px;height:16px}
+.wg-count{color:var(--c);border:1px solid var(--c);border-radius:99px;padding:1px 10px;font-size:12px;font-weight:700}
+.log .disc{position:absolute;top:12px;right:48px;opacity:0;transition:opacity .15s}
+.log:hover .disc{opacity:1}
+.log .disc.solo{right:12px}
+@media(max-width:850px){.log .disc{opacity:1}}
 /* staff forums */
 .forum-layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:14px;min-height:520px}
 .forum-side,.forum-chat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
@@ -375,6 +385,7 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
   <aside>
     <div class="brand"><div class="logo"><svg><use href="#i-shield"/></svg></div>Mod Panel</div>
     <button class="nav on" data-view="logs"><svg><use href="#i-list"/></svg>Logs</button>
+    <button class="nav" data-view="warns"><svg><use href="#i-warn"/></svg>Warns</button>
     <button class="nav" data-view="analytics"><svg><use href="#i-chart"/></svg>Analytics</button>
     <button class="nav" data-view="new"><svg><use href="#i-plus"/></svg>New log</button>
     <button class="nav" data-view="quizzes"><svg><use href="#i-quiz"/></svg>Quizzes</button>
@@ -406,6 +417,17 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
         <div class="chips" id="chips"></div>
       </div>
       <div id="logs"></div>
+    </section>
+
+    <!-- Warns view: every warn grouped by person -->
+    <section id="v-warns" class="hide">
+      <div class="top">
+        <div><h2>Warns</h2><p class="mut">Every warning, grouped by person.</p></div>
+        <button class="btn" id="warnNew"><svg><use href="#i-plus"/></svg>New warn</button>
+      </div>
+      <div class="stats" id="warnStats"></div>
+      <div class="bar"><div class="search"><svg><use href="#i-search"/></svg><input id="wq" placeholder="Search a person, mod or reason…"></div></div>
+      <div id="warnList"></div>
     </section>
 
     <section id="v-analytics" class="hide">
@@ -567,6 +589,7 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
 
   <nav class="mnav">
     <button class="nav on" data-view="logs"><svg><use href="#i-list"/></svg>Logs</button>
+    <button class="nav" data-view="warns"><svg><use href="#i-warn"/></svg>Warns</button>
     <button class="nav" data-view="analytics"><svg><use href="#i-chart"/></svg>Stats</button>
     <button class="nav" data-view="new"><svg><use href="#i-plus"/></svg>New</button>
     <button class="nav" data-view="quizzes"><svg><use href="#i-quiz"/></svg>Quiz</button>
@@ -633,12 +656,12 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.q
 
 /* navigation */
 function go(view) {
-  ["logs", "analytics", "new", "members", "quizzes", "take", "builder", "review", "forums", "announcements"].forEach((v) => { const el = $("v-" + v); if (el) el.classList.toggle("hide", v !== view); });
+  ["logs", "warns", "analytics", "new", "members", "quizzes", "take", "builder", "review", "forums", "announcements"].forEach((v) => { const el = $("v-" + v); if (el) el.classList.toggle("hide", v !== view); });
   const navView = ["take", "builder"].includes(view) ? "quizzes" : view;
   document.querySelectorAll(".nav[data-view]").forEach((n) => n.classList.toggle("on", n.dataset.view === navView));
   if (view === "quizzes") loadQuizzes();
   if (view === "review") loadSubs();
-  if (view === "logs") loadLogs();
+  if (view === "logs" || view === "warns") loadLogs();
   if (view === "analytics") loadAnalytics();
   if (view === "members") loadUsers();
   if (view === "forums") loadForums();
@@ -1011,7 +1034,7 @@ async function loadLogs() {
   if (!allLogs.length) $("logs").innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
   try {
     allLogs = await api("/api/logs");
-    renderStats(); renderLogs();
+    renderStats(); renderLogs(); renderWarns();
   } catch (e) { $("logs").innerHTML = `<div class="empty">${ico("warn")}<div>${esc(e.message)}</div></div>`; }
 }
 function renderStats() {
@@ -1066,21 +1089,86 @@ function renderLog(l, i) {
       ${l.note ? `<div class="note">${esc(l.note)}</div>` : ""}
       ${(l.images || []).length ? `<div class="thumbs">${l.images.map((s) => `<img src="${esc(s)}" alt="" data-lb>`).join("")}</div>` : ""}
     </div>
+    <button class="icon-btn disc ${can ? "" : "solo"}" title="Discuss in the forum" data-discuss="${esc(l.id)}">${ico("users")}</button>
     ${can ? `<button class="icon-btn del" title="Delete" data-del="${esc(l.id)}">${ico("trash")}</button>` : ""}
   </div>`;
 }
-$("logs").addEventListener("click", async (e) => {
+async function logClick(e) {
   const img = e.target.closest("[data-lb]");
   if (img) return lightbox(img.src);
+  const dis = e.target.closest("[data-discuss]");
+  if (dis) return discussLog(dis.dataset.discuss);
+  const nw = e.target.closest("[data-warn-for]");
+  if (nw) return warnFor(nw.dataset.warnFor);
   const del = e.target.closest("[data-del]");
   if (!del) return;
   if (!(await confirmBox("Delete this log?", "This can't be undone.", "Delete"))) return;
   try {
     await api("/api/logs?id=" + encodeURIComponent(del.dataset.del), { method: "DELETE" });
     allLogs = allLogs.filter((l) => l.id !== del.dataset.del);
-    renderStats(); renderLogs(); toast("Log deleted");
+    renderStats(); renderLogs(); renderWarns(); toast("Log deleted");
   } catch (err) { toast(err.message, true); }
-});
+}
+$("logs").addEventListener("click", logClick);
+$("warnList").addEventListener("click", logClick);
+
+/* warns view */
+function renderWarns() {
+  const q = $("wq").value.trim().toLowerCase();
+  const warns = allLogs.filter((l) => l.action === "Warn");
+  const g = {};
+  warns.forEach((l) => { const k = String(l.target).toLowerCase(); (g[k] = g[k] || { name: l.target, items: [] }).items.push(l); });
+  const all = Object.values(g);
+  const week = warns.filter((l) => Date.now() - new Date(l.at) < 7 * 864e5).length;
+  $("warnStats").innerHTML = [
+    ["Warns", warns.length, "warn", "var(--warn)"], ["People warned", all.length, "users", "var(--mute)"],
+    ["3+ warns", all.filter((x) => x.items.length >= 3).length, "ban", "var(--ban)"], ["This week", week, "cal", "var(--acc)"],
+  ].map(([k, v, i, c]) => `<div class="stat" style="--c:${c}"><div class="k" style="color:${c}">${ico(i)}<span class="mut">${k}</span></div><div class="v">${v}</div></div>`).join("");
+  const groups = all
+    .filter((x) => !q || x.name.toLowerCase().includes(q) || x.items.some((l) => [l.mod, l.note].join(" ").toLowerCase().includes(q)))
+    .sort((a, b) => b.items.length - a.items.length || new Date(b.items[0].at) - new Date(a.items[0].at));
+  if (!groups.length) {
+    $("warnList").innerHTML = `<div class="empty">${ico("warn")}<div>${warns.length ? "No warn matches your search." : "No warns yet — use “New warn”."}</div></div>`;
+    return;
+  }
+  $("warnList").innerHTML = groups.map((x) => {
+    const n = x.items.length, c = n >= 3 ? "var(--ban)" : n === 2 ? "var(--kick)" : "var(--warn)";
+    return `<div class="wgroup"><div class="wg-head"><span class="wg-name">${ico("user")}${esc(x.name)}</span>
+      <span class="wg-count" style="--c:${c}">${n} warn${n > 1 ? "s" : ""}</span>
+      <button class="btn ghost sm" data-warn-for="${esc(x.name)}">${ico("plus")}Warn</button></div>
+      ${x.items.map((l, i) => renderLog(l, i)).join("")}</div>`;
+  }).join("");
+}
+$("wq").addEventListener("input", renderWarns);
+$("warnNew").onclick = () => warnFor("");
+function warnFor(name) {
+  go("new");
+  $("target").value = name;
+  pickedAction = "Warn"; buildActs();
+  (name ? $("note") : $("target")).focus();
+}
+
+/* forum for logs: one #log-<person> channel per target, with the log pinned as first message */
+async function discussLog(id) {
+  const l = allLogs.find((x) => x.id === id);
+  if (!l) return;
+  const slug = String(l.target).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30) || "unknown";
+  const name = "log-" + slug;
+  try {
+    toast("Opening discussion…");
+    const chans = (await api("/api/forums")).channels || [];
+    let ch = chans.find((c) => c.name.toLowerCase() === name);
+    if (!ch) ch = await api("/api/forums", { method: "POST", body: { action: "create-channel", name, description: "Discussion about " + l.target } });
+    const msgs = (await api("/api/forums?channelId=" + encodeURIComponent(ch.id))).messages || [];
+    const tag = "(log " + l.id + ")";
+    if (!msgs.some((m) => (m.text || "").includes(tag))) {
+      const text = `📌 ${l.action} · ${l.target}\nBy ${l.mod} — ${new Date(l.at).toLocaleString()}\n${l.note ? l.note + "\n" : ""}${tag}`;
+      await api("/api/forums", { method: "POST", body: { action: "send-message", channelId: ch.id, text, images: l.images || [] } });
+    }
+    forumActiveId = ch.id;
+    go("forums");
+  } catch (e) { toast(e.message, true); }
+}
 
 /* new log form */
 function buildActs() {
