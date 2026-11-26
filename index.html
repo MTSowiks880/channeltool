@@ -223,6 +223,13 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
 .bq .bqh select{width:auto}
 .bopt{display:flex;align-items:center;gap:8px;margin-top:8px}
 .bopt input[type=radio]{width:auto;margin:0}
+.qtimer{position:sticky;top:12px;z-index:5;display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line2);border-radius:12px;padding:10px 14px;margin-bottom:16px;box-shadow:var(--sh)}
+.qtimer b{font-size:20px;font-variant-numeric:tabular-nums;min-width:86px}
+.qtimer .bar{flex:1;height:7px;border-radius:99px;background:var(--panel2);overflow:hidden}
+.qtimer .bar i{display:block;height:100%;background:var(--acc);border-radius:99px;transition:width 1s linear}
+.qtimer.low{border-color:#f87171}.qtimer.low b{color:#f87171}.qtimer.low .bar i{background:#f87171}
+.qtimer.low{animation:qpulse 1.2s ease-in-out infinite}
+@keyframes qpulse{50%{box-shadow:0 0 0 4px rgba(248,113,113,.18)}}
 .sub{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px;animation:pop .3s ease both}
 .sub .h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .sub .av{width:38px;height:38px;border-radius:50%}
@@ -553,6 +560,7 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
     <!-- Take quiz -->
     <section id="v-take" class="hide">
       <div class="top"><div><h2 id="takeTitle"></h2><p class="mut" id="takeDesc"></p></div></div>
+      <div class="qtimer hide" id="qTimer">⏱ <b id="qTimeLeft">--:--</b><div class="bar"><i id="qTimeBar"></i></div><span class="mut" id="qTimeTotal"></span></div>
       <form class="card" id="takeForm">
         <div id="takeQs"></div>
         <div class="err" id="takeErr"></div>
@@ -569,6 +577,11 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
       <div class="card">
         <div class="field"><label for="bTitle">Title</label><input id="bTitle" maxlength="100" placeholder="e.g. Mod application" autocomplete="off"></div>
         <div class="field"><label for="bDesc">Description <span class="dim">(optional)</span></label><input id="bDesc" maxlength="500" autocomplete="off"></div>
+        <div class="field"><label for="bTime">Time limit</label><select id="bTime">
+          <option value="0">No time limit</option><option value="5">5 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option>
+          <option value="20">20 minutes</option><option value="30">30 minutes</option><option value="45">45 minutes</option><option value="60">1 hour</option>
+          <option value="90">1 h 30 (90 minutes)</option><option value="120">2 hours</option><option value="180">3 hours</option></select>
+          <div class="dim" style="font-size:12px;margin-top:6px">When time runs out, the answers are sent automatically.</div></div>
         <div class="field" id="bPassWrap"><label for="bPass">Pass mark for multiple-choice questions (%)</label><input id="bPass" type="number" min="0" max="100" value="70"></div>
         <label>Questions</label>
         <div id="bqs"></div>
@@ -665,6 +678,7 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.q
 
 /* navigation */
 function go(view) {
+  if (view !== "take" && typeof stopTimer === "function" && qTick) stopTimer();
   ["logs", "warns", "analytics", "new", "members", "quizzes", "take", "builder", "review", "forums", "announcements"].forEach((v) => { const el = $("v-" + v); if (el) el.classList.toggle("hide", v !== view); });
   const navView = ["take", "builder"].includes(view) ? "quizzes" : view;
   document.querySelectorAll(".nav[data-view]").forEach((n) => n.classList.toggle("on", n.dataset.view === navView));
@@ -1398,7 +1412,7 @@ function renderQuizzes() {
     return `<div class="qz" style="animation-delay:${Math.min(i, 10) * 30}ms">
       <h3>${esc(q.title)}</h3>
       ${q.description ? `<div class="mut">${esc(q.description)}</div>` : ""}
-      <div class="meta">${q.questions.length} question${q.questions.length > 1 ? "s" : ""}</div>
+      <div class="meta">${q.questions.length} question${q.questions.length > 1 ? "s" : ""}${q.timeLimit ? " · ⏱ " + fmtLimit(q.timeLimit) : ""}</div>
       ${res}
       <div class="row">${btn}${adm}</div>
     </div>`;
@@ -1427,26 +1441,60 @@ function startTake(id) {
       ? q.options.map((o, j) => `<label class="opt"><input type="radio" name="q${i}" value="${j}">${esc(o)}</label>`).join("")
       : `<textarea name="q${i}" maxlength="2000" placeholder="Your answer…"></textarea>`) + `</div>`).join("");
   go("take");
+  startTimer();
 }
-$("takeForm").addEventListener("submit", async (ev) => {
-  ev.preventDefault();
+
+/* quiz timer */
+let qTick = null, qSending = false;
+const fmtLimit = (m) => m >= 60 ? Math.floor(m / 60) + " h" + (m % 60 ? " " + (m % 60) + " min" : "") : m + " min";
+const timerKey = () => "quizStart:" + me.id + ":" + taking.id;
+function stopTimer() { clearInterval(qTick); qTick = null; $("qTimer").classList.add("hide"); }
+function startTimer() {
+  stopTimer(); qSending = false;
+  const mins = taking.timeLimit || 0;
+  if (!mins) return;
+  // The start time is kept, so leaving or refreshing the page does not reset the timer.
+  let start = Date.now();
+  try {
+    const saved = +localStorage.getItem(timerKey());
+    if (saved && Date.now() - saved < mins * 60000) start = saved;
+    else localStorage.setItem(timerKey(), String(start));
+  } catch (_) {}
+  const end = start + mins * 60000;
+  $("qTimeTotal").textContent = fmtLimit(mins);
+  $("qTimer").classList.remove("hide");
+  const tick = () => {
+    const left = Math.max(0, end - Date.now()), s = Math.ceil(left / 1000);
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    $("qTimeLeft").textContent = (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(sec).padStart(2, "0");
+    $("qTimeBar").style.width = (left / (mins * 60000)) * 100 + "%";
+    $("qTimer").classList.toggle("low", left < Math.min(5 * 60000, mins * 60000 * 0.2));
+    if (left <= 0) { stopTimer(); toast("Time is up — your answers were sent", true); sendQuiz(true); }
+  };
+  tick(); qTick = setInterval(tick, 1000);
+}
+function clearTimerStart() { try { localStorage.removeItem(timerKey()); } catch (_) {} }
+$("takeForm").addEventListener("submit", (ev) => { ev.preventDefault(); sendQuiz(false); });
+async function sendQuiz(timeUp) {
+  if (qSending || !taking) return;
   $("takeErr").textContent = "";
   const answers = taking.questions.map((q, i) => {
     if (q.type === "choice") { const c = document.querySelector(`input[name="q${i}"]:checked`); return c ? +c.value : null; }
     return document.querySelector(`textarea[name="q${i}"]`).value;
   });
-  const btn = $("takeBtn"); btn.disabled = true; btn.textContent = "Sending…";
+  const btn = $("takeBtn"); btn.disabled = true; btn.textContent = "Sending…"; qSending = true;
   try {
-    const r = await api("/api/submissions", { method: "POST", body: { quizId: taking.id, answers } });
+    const r = await api("/api/submissions", { method: "POST", body: { quizId: taking.id, answers, timeUp } });
+    stopTimer(); clearTimerStart();
     toast(r.status === "pending" ? "Sent! An admin will review your answers." : r.status === "passed" ? "Passed (" + r.pct + "%)" : "Not passed (" + r.pct + "%)", r.status === "failed");
     go("quizzes");
-  } catch (e) { $("takeErr").textContent = e.message; }
+  } catch (e) { $("takeErr").textContent = e.message; qSending = false; }
   finally { btn.disabled = false; btn.textContent = "Submit answers"; }
-});
+}
 
 /* builder */
 const blankQ = () => ({ type: "text", q: "", options: ["", ""], correct: 0 });
-$("newQuizBtn").onclick = () => { bq = { title: "", description: "", passScore: 70, questions: [blankQ()] }; openBuilder(); };
+$("newQuizBtn").onclick = () => { bq = { title: "", description: "", passScore: 70, timeLimit: 0, questions: [blankQ()] }; openBuilder(); };
 function editQuiz(id) {
   const q = allQuizzes.find((x) => x.id === id);
   if (!q) return;
@@ -1457,6 +1505,9 @@ function editQuiz(id) {
 function openBuilder() {
   $("bHead").textContent = bq.id ? "Edit quiz" : "New quiz";
   $("bTitle").value = bq.title; $("bDesc").value = bq.description || ""; $("bPass").value = bq.passScore;
+  const tl = String(bq.timeLimit || 0), sel = $("bTime");
+  if (![...sel.options].some((o) => o.value === tl)) sel.insertAdjacentHTML("beforeend", `<option value="${tl}">${tl} minutes</option>`);
+  sel.value = tl;
   $("bErr").textContent = "";
   renderBuilder(); go("builder");
 }
@@ -1477,6 +1528,7 @@ function renderBuilder() {
 $("bTitle").oninput = () => (bq.title = $("bTitle").value);
 $("bDesc").oninput = () => (bq.description = $("bDesc").value);
 $("bPass").oninput = () => (bq.passScore = +$("bPass").value);
+$("bTime").onchange = () => (bq.timeLimit = +$("bTime").value);
 $("addQ").onclick = () => { if (bq.questions.length >= 30) return toast("Max 30 questions", true); bq.questions.push(blankQ()); renderBuilder(); };
 const bqOf = (el) => bq.questions[+el.closest(".bq").dataset.i];
 $("bqs").addEventListener("input", (e) => {
@@ -1500,7 +1552,7 @@ $("bqs").addEventListener("click", (e) => {
 });
 $("bSave").onclick = async () => {
   $("bErr").textContent = "";
-  const body = { id: bq.id, title: bq.title, description: bq.description, passScore: bq.passScore,
+  const body = { id: bq.id, title: bq.title, description: bq.description, passScore: bq.passScore, timeLimit: bq.timeLimit || 0,
     questions: bq.questions.map((q) => q.type === "text" ? { type: "text", q: q.q } : { type: "choice", q: q.q, options: q.options, correct: q.correct }) };
   $("bSave").disabled = true;
   try { await api("/api/quizzes", { method: "POST", body }); toast("Quiz saved"); go("quizzes"); }
@@ -1535,7 +1587,7 @@ function renderSub(s, i) {
   const info = !pend ? `<div class="fb">${s.auto ? "Graded automatically" : "Reviewed by " + esc(s.reviewerName || "?") + (s.reviewedAt ? " · " + fmt(s.reviewedAt) : "")}</div>` : "";
   return `<div class="sub" data-id="${esc(s.id)}" style="animation-delay:${Math.min(i, 10) * 25}ms">
     <div class="h"><img class="av" src="${esc(s.avatar || "https://cdn.discordapp.com/embed/avatars/0.png")}" alt="">
-      <div><b>${esc(s.name)}</b> <span class="mut">answered</span> <b>${esc(s.quizTitle)}</b><div class="time dim" style="font-size:12.5px">${fmt(s.at)}${s.pct != null ? " · " + s.pct + "% on multiple choice" : ""}</div></div>
+      <div><b>${esc(s.name)}</b> <span class="mut">answered</span> <b>${esc(s.quizTitle)}</b><div class="time dim" style="font-size:12.5px">${fmt(s.at)}${s.pct != null ? " · " + s.pct + "% on multiple choice" : ""}${s.timeUp ? " · ⏱ time ran out" : ""}</div></div>
       <span style="margin-left:auto">${statBadge(s.status)}</span></div>
     <details ${pend ? "open" : ""}><summary>Answers</summary>${answers}</details>
     ${info}
