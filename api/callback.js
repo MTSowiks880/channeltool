@@ -30,6 +30,7 @@ module.exports = handle(async (req, res, redis) => {
   const old = await redis.hget("users", d.id);
   const prev = old ? JSON.parse(old) : null;
   const u = {
+    ...(prev || {}),
     id: d.id,
     name: d.global_name || d.username,
     username: d.username,
@@ -40,6 +41,7 @@ module.exports = handle(async (req, res, redis) => {
     color: d.accent_color != null ? "#" + d.accent_color.toString(16).padStart(6, "0") : null,
     role: prev ? prev.role : d.id === process.env.OWNER_ID ? "owner" : "pending",
     seen: new Date().toISOString(),
+    joined: (prev && prev.joined) || new Date().toISOString(),
   };
   await redis.hset("users", d.id, JSON.stringify(u));
   res.setHeader("Set-Cookie", [cookie(makeSession(d.id), 2592000), "st=; Path=/; Max-Age=0"]);
