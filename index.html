@@ -229,6 +229,9 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
 .qtimer .bar i{display:block;height:100%;background:var(--acc);border-radius:99px;transition:width 1s linear}
 .qtimer.low{border-color:#f87171}.qtimer.low b{color:#f87171}.qtimer.low .bar i{background:#f87171}
 .qtimer.low{animation:qpulse 1.2s ease-in-out infinite}
+.qwatch{display:flex;gap:10px;align-items:center;padding:10px 14px;margin-bottom:16px;border-radius:12px;border:1px solid rgba(251,191,36,.35);background:rgba(251,191,36,.08);color:#fcd34d;font-size:13px}
+.leftflag{display:inline-block;margin-top:8px;padding:6px 10px;border-radius:9px;font-size:12.5px;font-weight:600}
+.leftflag.ok{background:rgba(52,211,153,.1);color:#6ee7b7}.leftflag.bad{background:rgba(248,113,113,.12);color:#fca5a5}
 @keyframes qpulse{50%{box-shadow:0 0 0 4px rgba(248,113,113,.18)}}
 .sub{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px;animation:pop .3s ease both}
 .sub .h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -561,6 +564,7 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
     <section id="v-take" class="hide">
       <div class="top"><div><h2 id="takeTitle"></h2><p class="mut" id="takeDesc"></p></div></div>
       <div class="qtimer hide" id="qTimer">⏱ <b id="qTimeLeft">--:--</b><div class="bar"><i id="qTimeBar"></i></div><span class="mut" id="qTimeTotal"></span></div>
+      <div class="qwatch">👁 Stay on this page: leaving it (other tab, other app) is recorded and shown to the admins. <b id="qLeaves" style="margin-left:auto"></b></div>
       <form class="card" id="takeForm">
         <div id="takeQs"></div>
         <div class="err" id="takeErr"></div>
@@ -679,6 +683,7 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.q
 /* navigation */
 function go(view) {
   if (view !== "take" && typeof stopTimer === "function" && qTick) stopTimer();
+  if (view !== "take" && typeof stopWatch === "function" && watch) stopWatch(false);
   ["logs", "warns", "analytics", "new", "members", "quizzes", "take", "builder", "review", "forums", "announcements"].forEach((v) => { const el = $("v-" + v); if (el) el.classList.toggle("hide", v !== view); });
   const navView = ["take", "builder"].includes(view) ? "quizzes" : view;
   document.querySelectorAll(".nav[data-view]").forEach((n) => n.classList.toggle("on", n.dataset.view === navView));
@@ -1442,6 +1447,7 @@ function startTake(id) {
       : `<textarea name="q${i}" maxlength="2000" placeholder="Your answer…"></textarea>`) + `</div>`).join("");
   go("take");
   startTimer();
+  startWatch();
 }
 
 /* quiz timer */
@@ -1474,6 +1480,44 @@ function startTimer() {
   tick(); qTick = setInterval(tick, 1000);
 }
 function clearTimerStart() { try { localStorage.removeItem(timerKey()); } catch (_) {} }
+
+/* leave tracking: counts every time the member leaves the page during a quiz */
+let watch = null;
+const watchKey = () => "quizWatch:" + me.id + ":" + taking.id;
+function saveWatch() { try { localStorage.setItem(watchKey(), JSON.stringify({ leaves: watch.leaves, away: watch.away })); } catch (_) {} }
+function paintWatch() { $("qLeaves").textContent = watch && watch.leaves ? "Left " + watch.leaves + "×" : ""; }
+function startWatch() {
+  let old = {};
+  try { old = JSON.parse(localStorage.getItem(watchKey()) || "{}"); } catch (_) {}
+  // A refresh during the quiz counts as one more exit.
+  watch = { leaves: old.leaves || 0, away: old.away || 0, since: null };
+  if (old.open) watch.leaves++;
+  try { localStorage.setItem(watchKey(), JSON.stringify({ leaves: watch.leaves, away: watch.away, open: true })); } catch (_) {}
+  paintWatch();
+}
+function leaveNow() {
+  if (!watch || watch.since) return;
+  watch.since = Date.now(); watch.leaves++; saveWatch(); paintWatch();
+}
+function backNow() {
+  if (!watch || !watch.since) return;
+  watch.away += Date.now() - watch.since; watch.since = null; saveWatch();
+  toast("You left the quiz page — this was recorded", true);
+}
+function watchResult() {
+  if (!watch) return { leaves: 0, awaySec: 0 };
+  const away = watch.away + (watch.since ? Date.now() - watch.since : 0);
+  return { leaves: watch.leaves, awaySec: Math.round(away / 1000) };
+}
+function stopWatch(done) {
+  if (watch && done) { try { localStorage.removeItem(watchKey()); } catch (_) {} }
+  else if (watch) { try { localStorage.setItem(watchKey(), JSON.stringify({ leaves: watch.leaves, away: watch.away })); } catch (_) {} }
+  watch = null;
+}
+const quizOpen = () => watch && !$("v-take").classList.contains("hide");
+document.addEventListener("visibilitychange", () => { if (!quizOpen()) return; document.hidden ? leaveNow() : backNow(); });
+window.addEventListener("blur", () => { if (quizOpen()) leaveNow(); });
+window.addEventListener("focus", () => { if (quizOpen() && !document.hidden) backNow(); });
 $("takeForm").addEventListener("submit", (ev) => { ev.preventDefault(); sendQuiz(false); });
 async function sendQuiz(timeUp) {
   if (qSending || !taking) return;
@@ -1484,8 +1528,8 @@ async function sendQuiz(timeUp) {
   });
   const btn = $("takeBtn"); btn.disabled = true; btn.textContent = "Sending…"; qSending = true;
   try {
-    const r = await api("/api/submissions", { method: "POST", body: { quizId: taking.id, answers, timeUp } });
-    stopTimer(); clearTimerStart();
+    const r = await api("/api/submissions", { method: "POST", body: { quizId: taking.id, answers, timeUp, ...watchResult() } });
+    stopTimer(); clearTimerStart(); stopWatch(true);
     toast(r.status === "pending" ? "Sent! An admin will review your answers." : r.status === "passed" ? "Passed (" + r.pct + "%)" : "Not passed (" + r.pct + "%)", r.status === "failed");
     go("quizzes");
   } catch (e) { $("takeErr").textContent = e.message; qSending = false; }
@@ -1574,6 +1618,7 @@ function renderReview() {
   if (!list.length) { $("reviewList").innerHTML = `<div class="empty">${ico("check")}<div>${revTab === "pending" ? "Nothing to review — all caught up." : "No reviewed submissions yet."}</div></div>`; return; }
   $("reviewList").innerHTML = list.map(renderSub).join("");
 }
+const fmtAway = (sec) => { sec = sec || 0; const m = Math.floor(sec / 60), x = sec % 60; return m ? m + " min " + (x ? x + " s" : "") : x + " s"; };
 function renderSub(s, i) {
   const answers = (s.questions || []).map((q, k) => {
     const a = s.answers[k];
@@ -1589,6 +1634,7 @@ function renderSub(s, i) {
     <div class="h"><img class="av" src="${esc(s.avatar || "https://cdn.discordapp.com/embed/avatars/0.png")}" alt="">
       <div><b>${esc(s.name)}</b> <span class="mut">answered</span> <b>${esc(s.quizTitle)}</b><div class="time dim" style="font-size:12.5px">${fmt(s.at)}${s.pct != null ? " · " + s.pct + "% on multiple choice" : ""}${s.timeUp ? " · ⏱ time ran out" : ""}</div></div>
       <span style="margin-left:auto">${statBadge(s.status)}</span></div>
+    ${s.leaves != null ? `<div class="leftflag ${s.leaves ? "bad" : "ok"}">${s.leaves ? "👁 Left the page " + s.leaves + " time" + (s.leaves > 1 ? "s" : "") + " · " + fmtAway(s.awaySec) + " away" : "👁 Stayed on the page the whole time"}</div>` : ""}
     <details ${pend ? "open" : ""}><summary>Answers</summary>${answers}</details>
     ${info}
     <textarea data-fb maxlength="1000" placeholder="Feedback for the member (optional)">${esc(s.feedback || "")}</textarea>
