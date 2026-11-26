@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Mod Panel</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Cdefs%3E%3ClinearGradient id=%27g%27 x1=%270%27 y1=%270%27 x2=%271%27 y2=%271%27%3E%3Cstop stop-color=%27%237c6cff%27/%3E%3Cstop offset=%271%27 stop-color=%27%23d46cff%27/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%2732%27 height=%2732%27 rx=%279%27 fill=%27url(%23g)%27/%3E%3Cpath d=%27M16 6 8.5 9v6.6c0 4.6 3 8 7.5 9.7 4.5-1.7 7.5-5.1 7.5-9.7V9L16 6Z%27 fill=%27%23fff%27 fill-opacity=%27.25%27 stroke=%27%23fff%27 stroke-width=%272%27 stroke-linejoin=%27round%27/%3E%3Cpath d=%27m12.6 15.8 2.6 2.6 4.8-5%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272.2%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E">
+<meta name="theme-color" content="#0b0d14">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
@@ -484,36 +486,369 @@ input, select, textarea { font-size: 16px; }
   .btn, .icon-btn, .chip, .act-opt { touch-action: manipulation; }
 }
 
+
+/* ============================================================
+   couche de design partagée (index.html + forum.html)
+   Chargée APRÈS le <style> de chaque page : elle affine, ne remplace pas.
+   Respecte les réglages utilisateur : --acc / --acc2 / --accg,
+   body.noglow, body.nomotion, body.dense, --fs.
+   ============================================================ */
+
+:root{
+  --ease:cubic-bezier(.22,1,.36,1);
+  --glass:color-mix(in srgb,var(--panel) 72%,transparent);
+  --edge:color-mix(in srgb,#fff 7%,transparent);
+  --glow:color-mix(in srgb,var(--acc,#7c6cff) 35%,transparent);
+  --sh-lg:0 24px 60px -24px rgba(0,0,0,.75),0 2px 0 0 var(--edge) inset;
+}
+
+html{scroll-behavior:smooth;color-scheme:dark}
+::selection{background:color-mix(in srgb,var(--acc,#7c6cff) 45%,transparent);color:#fff}
+
+/* ---------- scrollbars ---------- */
+*{scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:99px;border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:var(--dim);background-clip:padding-box;border:2px solid transparent}
+
+/* ---------- ambiance : aurore + grain ---------- */
+body{position:relative}
+body::before{
+  background:
+    radial-gradient(800px 480px at 88% -8%,color-mix(in srgb,var(--acc,#7c6cff) 22%,transparent),transparent 62%),
+    radial-gradient(640px 420px at -8% 108%,color-mix(in srgb,var(--acc,#7c6cff) 14%,#ff6cf0 40%) ,transparent 62%),
+    radial-gradient(500px 300px at 50% 50%,color-mix(in srgb,var(--acc,#7c6cff) 4%,transparent),transparent 70%)!important;
+  animation:aurora 22s ease-in-out infinite alternate;
+}
+body::after{ /* grain léger */
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.035;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+@keyframes aurora{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(-2%,1.5%,0) scale(1.06)}}
+body.noglow::before,body.noglow::after{display:none}
+
+/* ---------- boutons ---------- */
+.btn{
+  position:relative;overflow:hidden;isolation:isolate;letter-spacing:.005em;
+  background:var(--accg);
+  box-shadow:0 8px 24px -8px var(--glow),0 1px 0 0 rgba(255,255,255,.28) inset;
+  transition:transform .25s var(--ease),filter .2s,box-shadow .25s var(--ease),background .2s,border-color .2s;
+}
+.btn::after{ /* reflet qui traverse au survol */
+  content:"";position:absolute;inset:0;z-index:-1;transform:translateX(-120%) skewX(-18deg);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);
+  transition:transform .6s var(--ease);
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 14px 30px -10px var(--glow),0 1px 0 0 rgba(255,255,255,.3) inset}
+.btn:hover::after{transform:translateX(120%) skewX(-18deg)}
+.btn:active{transform:translateY(0) scale(.97)}
+.btn.ghost,.btn.danger,.btn.ok{box-shadow:none}
+.btn.ghost::after,.btn.danger::after,.btn.ok::after{display:none}
+.btn.ghost{background:var(--glass);backdrop-filter:blur(8px)}
+.btn.ghost:hover{border-color:color-mix(in srgb,var(--acc,#7c6cff) 45%,var(--line2));box-shadow:0 8px 22px -12px var(--glow)}
+.btn.discord{background:linear-gradient(135deg,#5865F2,#7983f5);box-shadow:0 10px 28px -8px rgba(88,101,242,.85),0 1px 0 0 rgba(255,255,255,.25) inset}
+.icon-btn{transition:background .2s,color .2s,transform .2s var(--ease)}
+.icon-btn:hover{transform:scale(1.08)}
+
+:where(a,button,input,select,textarea,summary,[tabindex]):focus-visible{
+  outline:2px solid var(--acc,#7c6cff);outline-offset:2px;border-radius:10px;
+}
+
+/* ---------- champs ---------- */
+input,select,textarea{
+  background:color-mix(in srgb,var(--bg2) 85%,transparent);
+  transition:border-color .2s,box-shadow .25s var(--ease),background .2s;
+}
+input:hover,select:hover,textarea:hover{border-color:var(--line2)}
+input:focus,select:focus,textarea:focus{
+  border-color:var(--acc,#7c6cff);background:var(--bg2);
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--acc,#7c6cff) 18%,transparent),0 8px 24px -12px var(--glow);
+}
+input::placeholder,textarea::placeholder{color:var(--dim)}
+
+/* ---------- surfaces : verre + bordure dégradée + spotlight ---------- */
+.stat,.log,.mem,.qz,.sub,.card,.set-sec,.ann-card,.forum-side,.forum-chat,.modal,.profile-pop,
+.topic,.panel,.form,.me,.auth,.emoji-picker{
+  background-color:var(--glass);
+  border-color:var(--line);
+  box-shadow:var(--sh-lg);
+}
+.stat,.log,.mem,.qz,.sub,.ann-card,.topic,.panel,.card,.form{
+  --mx:50%;--my:0%;
+  background-image:radial-gradient(420px circle at var(--mx) var(--my),color-mix(in srgb,var(--acc,#7c6cff) 11%,transparent),transparent 45%);
+  transition:transform .35s var(--ease),border-color .25s,box-shadow .35s var(--ease),background-color .25s;
+}
+.stat:hover,.log:hover,.mem:hover,.qz:hover,.ann-card:hover,.topic:hover{
+  border-color:color-mix(in srgb,var(--acc,#7c6cff) 40%,var(--line2));
+  transform:translateY(-3px);
+  box-shadow:0 22px 44px -22px rgba(0,0,0,.8),0 0 0 1px color-mix(in srgb,var(--acc,#7c6cff) 14%,transparent),0 2px 0 0 var(--edge) inset;
+}
+.log:hover{transform:translateY(-2px)}
+.card:hover,.form:hover,.panel:hover,.sub:hover{border-color:var(--line2)}
+
+/* ---------- écrans d'auth ---------- */
+.auth{
+  position:relative;border-radius:24px;padding:42px 34px;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--panel2) 80%,transparent),color-mix(in srgb,var(--panel) 80%,transparent));
+  backdrop-filter:blur(22px) saturate(140%);
+  animation:rise .7s var(--ease) both;
+}
+.auth::before{ /* liseré dégradé */
+  content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;pointer-events:none;
+  background:linear-gradient(160deg,color-mix(in srgb,var(--acc,#7c6cff) 70%,transparent),transparent 40%,transparent 60%,color-mix(in srgb,var(--acc,#7c6cff) 35%,transparent));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;
+}
+.auth h1{background:linear-gradient(180deg,#fff,#b9c0d6);-webkit-background-clip:text;background-clip:text;color:transparent}
+.logo{
+  box-shadow:0 12px 34px -8px var(--glow),0 1px 0 0 rgba(255,255,255,.35) inset;
+  animation:float 5s ease-in-out infinite;
+}
+.brand .logo{animation:none;box-shadow:0 8px 22px -8px var(--glow),0 1px 0 0 rgba(255,255,255,.3) inset}
+@keyframes float{50%{transform:translateY(-4px) rotate(-2deg)}}
+@keyframes rise{from{opacity:0;transform:translateY(22px) scale(.97);filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
+
+/* ---------- navigation ---------- */
+aside{
+  background:linear-gradient(180deg,color-mix(in srgb,var(--bg2) 82%,transparent),color-mix(in srgb,var(--bg) 82%,transparent));
+  backdrop-filter:blur(18px) saturate(130%);
+  border-right-color:color-mix(in srgb,#fff 6%,transparent);
+}
+.brand{font-size:16.5px;letter-spacing:-.015em}
+.nav{position:relative;border-radius:11px;transition:background .2s,color .2s,transform .25s var(--ease),padding .25s var(--ease)}
+.nav:hover{transform:translateX(3px)}
+.nav svg{transition:transform .3s var(--ease),color .2s}
+.nav:hover svg{transform:scale(1.15) rotate(-6deg)}
+.nav.on{box-shadow:0 8px 24px -14px var(--glow)}
+.nav.on::before{ /* barre active */
+  content:"";position:absolute;left:-14px;top:22%;bottom:22%;width:3px;border-radius:0 4px 4px 0;
+  background:var(--accg);box-shadow:0 0 12px var(--glow);
+}
+.nav .count{box-shadow:0 0 0 3px color-mix(in srgb,var(--ban) 20%,transparent);animation:beat 2s ease-in-out infinite}
+@keyframes beat{50%{transform:scale(1.12)}}
+.me{border-radius:16px;transition:transform .3s var(--ease),border-color .2s}
+.me:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--acc,#7c6cff) 40%,var(--line2))}
+.me img,.log .av,.mem img,.forum-msg .av,.sub .av,.avatar{transition:transform .3s var(--ease),box-shadow .3s}
+.log:hover .av,.mem:hover img,.topic:hover .avatar{transform:scale(1.07);box-shadow:0 0 0 2px var(--bg),0 0 0 4px color-mix(in srgb,var(--c,var(--acc,#7c6cff)) 60%,transparent)}
+
+/* ---------- titres de page ---------- */
+.top h2,.top h1{
+  font-size:clamp(24px,3vw,32px);letter-spacing:-.03em;
+  background:linear-gradient(180deg,#fff 30%,color-mix(in srgb,var(--acc2,#a78bfa) 55%,#b8bfd3));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+main>section,main>div[id],.shell main>section{animation:rise .55s var(--ease) both}
+
+/* ---------- stats ---------- */
+.stat{padding:18px 20px}
+.stat .v{
+  font-size:32px;font-variant-numeric:tabular-nums;
+  background:linear-gradient(180deg,#fff,color-mix(in srgb,var(--c,var(--acc)) 45%,#cfd5e6));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.stat::after{width:120px;height:120px;right:-34px;top:-40px;opacity:.14;filter:blur(18px);transition:opacity .4s,transform .5s var(--ease)}
+.stat:hover::after{opacity:.3;transform:scale(1.25)}
+.stat .k{text-transform:uppercase;letter-spacing:.06em;font-size:11px;font-weight:700}
+
+/* ---------- logs ---------- */
+.day{letter-spacing:.14em;font-size:11px;color:var(--mut)}
+.day::after{background:linear-gradient(90deg,var(--line2),transparent)}
+.log{padding:18px 18px 18px 20px}
+.log::before{width:4px;box-shadow:0 0 18px var(--c);border-radius:0 4px 4px 0}
+.badge{backdrop-filter:blur(4px);letter-spacing:.02em}
+.target{background:color-mix(in srgb,var(--bg2) 80%,transparent);transition:border-color .2s}
+.log:hover .target{border-color:color-mix(in srgb,var(--c,var(--acc)) 45%,var(--line))}
+.thumbs img{border-radius:12px;transition:transform .35s var(--ease),border-color .2s,box-shadow .35s var(--ease)}
+.thumbs img:hover{transform:scale(1.06) rotate(-.6deg);box-shadow:0 16px 32px -12px rgba(0,0,0,.8)}
+.role{backdrop-filter:blur(4px)}
+.role.owner{box-shadow:0 0 18px -4px rgba(251,191,36,.45)}
+
+/* ---------- chips / onglets / segments ---------- */
+.chip{transition:all .25s var(--ease)}
+.chip:hover{transform:translateY(-1px)}
+.chip.on{box-shadow:0 8px 20px -10px var(--c,var(--acc))}
+.tabs{background:var(--glass);backdrop-filter:blur(10px)}
+.tab{transition:background .2s,color .2s}
+.tab:hover{color:var(--txt)}
+.tab.on{background:linear-gradient(180deg,var(--panel2),color-mix(in srgb,var(--panel2) 70%,var(--bg2)));box-shadow:0 6px 16px -8px rgba(0,0,0,.7),0 1px 0 var(--line2) inset}
+.act-opt{transition:all .25s var(--ease)}
+.act-opt:hover{transform:translateY(-2px)}
+.act-opt.on{transform:translateY(-2px)}
+.drop{border-radius:16px;background:repeating-linear-gradient(135deg,transparent 0 12px,color-mix(in srgb,var(--acc,#7c6cff) 3%,transparent) 12px 24px);transition:all .3s var(--ease)}
+.drop:hover,.drop.over{transform:scale(1.01);box-shadow:0 0 0 4px color-mix(in srgb,var(--acc,#7c6cff) 10%,transparent)}
+.opt{transition:all .2s}
+.opt:hover{border-color:var(--line2);transform:translateX(2px)}
+
+/* ---------- forums / annonces ---------- */
+.forum-layout{gap:16px}
+.forum-channel{position:relative;transition:all .22s var(--ease)}
+.forum-channel:hover{transform:translateX(3px)}
+.forum-channel.on{box-shadow:0 8px 22px -14px var(--glow)}
+.forum-msg{border-radius:10px;transition:background .2s;margin:0 -8px;padding:10px 8px}
+.forum-msg:hover{background:color-mix(in srgb,#fff 2.5%,transparent)}
+.forum-compose{background:color-mix(in srgb,var(--bg2) 55%,transparent);backdrop-filter:blur(8px)}
+.forum-feed{scroll-behavior:smooth}
+.ann-card{border-radius:16px}
+
+/* ---------- quiz ---------- */
+.qtimer{backdrop-filter:blur(14px);box-shadow:0 16px 36px -18px rgba(0,0,0,.8)}
+.qtimer .bar i{background:var(--accg);box-shadow:0 0 12px var(--glow)}
+
+/* ---------- réglages ---------- */
+.set-sec{border-radius:20px}
+.sw span{transition:background .25s}
+.pack{transition:all .25s var(--ease)}
+.pack:hover{transform:translateY(-3px)}
+
+/* ---------- modales, toasts, lightbox ---------- */
+.modal-bg,.profile-pop-bg,.lb{backdrop-filter:blur(10px) saturate(120%)}
+.modal,.profile-pop,.emoji-picker{
+  background:linear-gradient(180deg,color-mix(in srgb,var(--panel2) 94%,transparent),color-mix(in srgb,var(--panel) 96%,transparent));
+  animation:modalIn .4s var(--ease) both;box-shadow:0 40px 80px -30px #000,0 0 0 1px color-mix(in srgb,#fff 6%,transparent);
+}
+@keyframes modalIn{from{opacity:0;transform:translateY(18px) scale(.94)}to{opacity:1;transform:none}}
+.profile-pop-banner{position:relative}
+.profile-pop-banner::after{content:"";position:absolute;inset:auto 0 0 0;height:50%;background:linear-gradient(transparent,var(--panel))}
+.profile-pop-avatar{box-shadow:0 0 0 2px color-mix(in srgb,var(--acc,#7c6cff) 60%,transparent),0 10px 24px -8px #000}
+.lb img{animation:modalIn .35s var(--ease) both}
+.toast{
+  backdrop-filter:blur(14px);background:color-mix(in srgb,var(--panel2) 90%,transparent);
+  box-shadow:0 18px 40px -16px #000,0 0 22px -8px color-mix(in srgb,var(--unban,#34d399) 50%,transparent);
+  animation:toastIn .45s var(--ease) both;
+}
+.toast.bad{box-shadow:0 18px 40px -16px #000,0 0 22px -8px color-mix(in srgb,var(--ban,#ff4d6d) 55%,transparent)}
+@keyframes toastIn{from{opacity:0;transform:translateX(30px) scale(.95)}to{opacity:1;transform:none}}
+
+/* ---------- squelette de chargement ---------- */
+.skel{border:1px solid var(--line);background:linear-gradient(100deg,var(--panel) 20%,color-mix(in srgb,var(--panel2) 140%,var(--acc) 6%) 50%,var(--panel) 80%);background-size:250% 100%}
+
+/* ---------- états vides ---------- */
+.empty,.forum-empty{
+  border-radius:20px;border-color:var(--line2);
+  background:radial-gradient(320px 160px at 50% 0%,color-mix(in srgb,var(--acc,#7c6cff) 8%,transparent),transparent 70%);
+}
+.empty svg{animation:float 4s ease-in-out infinite}
+
+/* ---------- forum.html : header & liste ---------- */
+.header{padding:10px 14px;border:1px solid var(--line);border-radius:16px;background:var(--glass);backdrop-filter:blur(16px);box-shadow:var(--sh-lg)}
+.back{padding:7px 12px;border-radius:9px;transition:all .25s var(--ease)}
+.back:hover{background:var(--panel2);transform:translateX(-3px)}
+.topic{border-radius:16px;padding:18px}
+.topic h3{letter-spacing:-.01em}
+.cat{letter-spacing:.03em;border:1px solid color-mix(in srgb,var(--acc,#7c6cff) 28%,transparent)}
+.post{transition:background .2s;border-radius:10px;margin:0 -8px;padding:15px 8px}
+.post:hover{background:color-mix(in srgb,#fff 2.5%,transparent)}
+.search span{pointer-events:none}
+
+/* ---------- entrée en cascade des listes ---------- */
+.list>*,.members>*,.ann-list>*,#logList>*,.stats>*{animation:rise .5s var(--ease) both}
+:is(.list,.members,.ann-list,#logList,.stats)>*:nth-child(1){animation-delay:.02s}
+:is(.list,.members,.ann-list,#logList,.stats)>*:nth-child(2){animation-delay:.06s}
+:is(.list,.members,.ann-list,#logList,.stats)>*:nth-child(3){animation-delay:.10s}
+:is(.list,.members,.ann-list,#logList,.stats)>*:nth-child(4){animation-delay:.14s}
+:is(.list,.members,.ann-list,#logList,.stats)>*:nth-child(5){animation-delay:.18s}
+:is(.list,.members,.ann-list,#logList,.stats)>*:nth-child(n+6){animation-delay:.22s}
+
+/* ---------- mobile ---------- */
+@media(max-width:760px){
+  .mnav{background:color-mix(in srgb,var(--bg2) 88%,transparent)!important;backdrop-filter:blur(20px) saturate(150%);border-top-color:color-mix(in srgb,#fff 8%,transparent)!important}
+  .mnav .nav:hover{transform:none}
+  .mnav .nav.on::before{left:30%;right:30%;top:-9px;bottom:auto;width:auto;height:3px;border-radius:0 0 4px 4px}
+  .mnav{overflow-x:auto;gap:2px;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+  .mnav::-webkit-scrollbar{display:none}
+  .mnav .nav{flex:0 0 auto!important;width:auto!important;min-width:68px!important;scroll-snap-align:center}
+  .mnav .nav.on{background:color-mix(in srgb,var(--acc,#7c6cff) 16%,transparent)}
+  .auth{padding:34px 22px}
+  .stat .v{font-size:28px}
+  .header{padding:8px 10px}
+}
+
+/* ---------- accessibilité / réglages utilisateur ---------- */
+@media(hover:none){
+  .stat:hover,.log:hover,.mem:hover,.qz:hover,.ann-card:hover,.topic:hover,.nav:hover,.btn:hover{transform:none}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+body.nomotion *,body.nomotion *::before,body.nomotion *::after{animation:none!important;transition:none!important}
+
+/* ============================================================
+   Jeu d'icônes duotone (symboles SVG) + logos
+   ============================================================ */
+svg{flex:none}
+svg.ic{width:1.15em;height:1.15em;vertical-align:-.22em;margin-right:.45em;color:var(--acc2,#a78bfa)}
+svg.ic.big{width:1.35em;height:1.35em}
+.set-sec h3{display:flex;align-items:center}
+.set-sec h3 svg.ic{width:20px;height:20px;margin-right:9px;padding:3px;box-sizing:content-box;border-radius:9px;background:color-mix(in srgb,var(--acc,#7c6cff) 16%,transparent)}
+.qtimer svg.ic,.qwatch svg.ic{margin-right:0;color:inherit}
+.btn svg,.back svg{width:1.15em;height:1.15em;margin:0}
+.btn svg.ic{color:inherit;margin-right:0}
+.search span{display:grid;place-items:center;width:18px;height:18px}
+.search span svg{width:18px;height:18px}
+.forum-msg .profile-pop-status svg{margin-right:.4em}
+.profile-pop-status svg.ic{color:var(--mut)}
+.repl{display:inline-flex;align-items:center;gap:5px}
+.repl svg{width:14px;height:14px;margin:0;color:var(--acc2,#a78bfa)}
+
+/* logo : tuile dégradée, reflet de verre, symbole blanc */
+.logo{position:relative;color:#fff;overflow:hidden}
+.logo::after{content:"";position:absolute;inset:0;background:linear-gradient(155deg,rgba(255,255,255,.38),transparent 45%,rgba(0,0,0,.18));pointer-events:none}
+.logo svg{width:58%;height:58%;color:#fff;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35));position:relative;z-index:1}
+.brand .logo svg{width:60%;height:60%}
+.header .brand .logo{width:38px;height:38px}
+
+/* icônes d'action : léger relief sur survol */
+.icon-btn svg,.nav svg,.act-opt svg{transition:transform .3s var(--ease),color .2s,filter .2s}
+.act-opt.on svg,.nav.on svg{filter:drop-shadow(0 0 8px color-mix(in srgb,var(--c,var(--acc,#7c6cff)) 70%,transparent))}
+.stat .k svg{filter:drop-shadow(0 0 6px color-mix(in srgb,var(--c,var(--acc)) 55%,transparent))}
+.icon-btn:hover svg{transform:scale(1.1)}
+.empty svg{width:48px;height:48px}
+
+/* correctif : cartes « Sound pack » étirées en hauteur */
+.packs{grid-auto-rows:min-content;align-items:start;align-content:start;flex:none;height:auto;min-height:0}
+.pack{height:auto;min-height:0}
+.set-row.col{flex-wrap:nowrap}
+
 </style>
 </head>
 <body>
 
 <svg width="0" height="0" style="position:absolute">
   <defs>
-    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
-    <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
-    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
-    <symbol id="i-megaphone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 13v-2Z"/><path d="M11.6 15.5 13 21l-4-1-1.5-5.5M5 13.5v4"/></symbol>
-    <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
-    <symbol id="i-out" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
-    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
-    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></symbol>
-    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
-    <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></symbol>
-    <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"/></symbol>
-    <symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
-    <symbol id="i-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="m12 2 3 6.5 7 .9-5.1 4.8 1.3 7L12 17.8 5.8 21.2l1.3-7L2 9.4l7-.9z"/></symbol>
-    <symbol id="i-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></symbol>
-    <symbol id="i-mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4zM23 9l-6 6M17 9l6 6"/></symbol>
-    <symbol id="i-kick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M17 11h6"/></symbol>
-    <symbol id="i-ban" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></symbol>
-    <symbol id="i-unban" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="M22 4 12 14l-3-3"/></symbol>
-    <symbol id="i-dots" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></symbol>
-    <symbol id="i-quiz" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></symbol>
-    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
     <symbol id="i-discord" viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.6 1.3a18.3 18.3 0 0 0-5.5 0L8.6 3a19.7 19.7 0 0 0-4.9 1.5C.6 9.1-.3 13.6.1 18.1a19.9 19.9 0 0 0 6 3l1.3-2a12.9 12.9 0 0 1-2-1l.5-.4a14.2 14.2 0 0 0 12.2 0l.5.4c-.6.4-1.3.7-2 1l1.3 2a19.8 19.8 0 0 0 6-3c.5-5.2-.8-9.7-3.6-13.7zM8 15.3c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4zm8 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4z"/></symbol>
-    <symbol id="i-sliders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
-  </defs>
+        <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" fill-opacity=".2" stroke="none" d="M12 2.6 4.6 5.6v5.9c0 4.6 3 8.2 7.4 9.9 4.4-1.7 7.4-5.3 7.4-9.9V5.6L12 2.6Z"/><path d="M12 2.6 4.6 5.6v5.9c0 4.6 3 8.2 7.4 9.9 4.4-1.7 7.4-5.3 7.4-9.9V5.6L12 2.6Z"/><path d="m8.7 11.9 2.2 2.2 4.4-4.6"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="17" height="16" rx="4.5" fill="currentColor" fill-opacity=".2" stroke="none"/><rect x="3.5" y="4" width="17" height="16" rx="4.5"/><path d="M8 9h8M8 12.5h8M8 16h4.5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="6" fill="currentColor" fill-opacity=".2" stroke="none"/><rect x="3" y="3" width="18" height="18" rx="6"/><path d="M12 8v8M8 12h8"/></symbol>
+    <symbol id="i-megaphone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" fill-opacity=".2" stroke="none" d="M4 9.8v4.4a1 1 0 0 0 1 1h2.6L17 20V4L7.6 8.8H5a1 1 0 0 0-1 1Z"/><path d="M4 9.8v4.4a1 1 0 0 0 1 1h2.6L17 20V4L7.6 8.8H5a1 1 0 0 0-1 1Z"/><path d="M20.2 9.4a3.6 3.6 0 0 1 0 5.2M8.6 15.2l1 4.3h2.4"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.3" fill="currentColor" fill-opacity=".2" stroke="none"/><circle cx="9" cy="8" r="3.3"/><path d="M2.8 19.6a6.2 6.2 0 0 1 12.4 0"/><path d="M15.8 4.9a3.3 3.3 0 0 1 0 6.2M17.6 14.3a6 6 0 0 1 3.6 5.3"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4" fill="currentColor" fill-opacity=".2" stroke="none"/><circle cx="12" cy="8" r="4"/><path d="M4.6 20.6a7.4 7.4 0 0 1 14.8 0"/></symbol>
+    <symbol id="i-out" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4H6.6A2.6 2.6 0 0 0 4 6.6v10.8A2.6 2.6 0 0 0 6.6 20H10"/><path d="m15.2 8 4 4-4 4M19.2 12H9.5"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5" fill="currentColor" fill-opacity=".2" stroke="none"/><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.9-4.9"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" fill-opacity=".2" stroke="none" d="M6 8h12l-.9 11.2a2 2 0 0 1-2 1.8H8.9a2 2 0 0 1-2-1.8L6 8Z"/><path d="M6 8h12l-.9 11.2a2 2 0 0 1-2 1.8H8.9a2 2 0 0 1-2-1.8L6 8Z"/><path d="M4 8h16M9.5 8V5.6a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V8M10 12v5M14 12v5"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="4.5" fill="currentColor" fill-opacity=".2" stroke="none"/><rect x="3.5" y="4.5" width="17" height="15" rx="4.5"/><circle cx="9" cy="10" r="1.6"/><path d="m4 17 4.4-4.1a1.6 1.6 0 0 1 2.1 0l3.5 3.3 1.9-1.7a1.6 1.6 0 0 1 2.1 0L20 16"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="11" width="4" height="9" rx="1.4" fill="currentColor" fill-opacity=".2" stroke="none"/><rect x="3.5" y="11" width="4" height="9" rx="1.4"/><rect x="10" y="4" width="4" height="16" rx="1.4" fill="currentColor" fill-opacity=".2" stroke="none"/><rect x="10" y="4" width="4" height="16" rx="1.4"/><rect x="16.5" y="8" width="4" height="12" rx="1.4" fill="currentColor" fill-opacity=".2" stroke="none"/><rect x="16.5" y="8" width="4" height="12" rx="1.4"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="4.5" fill="currentColor" fill-opacity=".2" stroke="none"/><rect x="3.5" y="5" width="17" height="15.5" rx="4.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" fill-opacity=".2" stroke="none" d="m12 3.2 2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6-4.4-4.2 6-.8L12 3.2Z"/><path d="m12 3.2 2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6-4.4-4.2 6-.8L12 3.2Z"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" fill-opacity=".2" stroke="none" d="M10.3 4.2 2.9 17.5a2 2 0 0 0 1.7 3h14.8a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M10.3 4.2 2.9 17.5a2 2 0 0 0 1.7 3h14.8a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4"/><path d="M12 17h.01" stroke-width="2.6"/></symbol>
+    <symbol id="i-mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" fill-opacity=".2" stroke="none" d="M4 9.5h2.8l4.7-4v13l-4.7-4H4a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1Z"/><path d="M4 9.5h2.8l4.7-4v13l-4.7-4H4a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1Z"/><path d="m15.5 9.5 5 5m0-5-5 5"/></symbol>
+    <symbol id="i-kick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="8" r="3.5" fill="currentColor" fill-opacity=".2" stroke="none"/><circle cx="9.5" cy="8" r="3.5"/><path d="M2.8 20a6.7 6.7 0 0 1 13.4 0M17 12h5m-2-2.2 2.2 2.2-2.2 2.2"/></symbol>
+    <symbol id="i-ban" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" fill="currentColor" fill-opacity=".2" stroke="none"/><circle cx="12" cy="12" r="9"/><path d="m5.7 5.7 12.6 12.6"/></symbol>
+    <symbol id="i-unban" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" fill="currentColor" fill-opacity=".2" stroke="none"/><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.8 2.8 5.7-5.8"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.9" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.9" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-quiz" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" fill="currentColor" fill-opacity=".2" stroke="none"/><circle cx="12" cy="12" r="9"/><path d="M9.3 9.3a2.8 2.8 0 0 1 5.4 1c0 1.8-2.7 2.2-2.7 4"/><path d="M12 17.6h.01" stroke-width="2.6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" fill="currentColor" fill-opacity=".2" stroke="none"/><circle cx="12" cy="12" r="9"/><path d="m8 12.4 2.7 2.7 5.3-5.4"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6.5h8M16.5 6.5h4M3.5 12H6M11 12h9.5M3.5 17.5h10M18.5 17.5h2"/><circle cx="14" cy="6.5" r="2.4" fill="currentColor" fill-opacity=".2" stroke="none"/><circle cx="14" cy="6.5" r="2.4"/><circle cx="8.5" cy="12" r="2.4" fill="currentColor" fill-opacity=".2" stroke="none"/><circle cx="8.5" cy="12" r="2.4"/><circle cx="16" cy="17.5" r="2.4" fill="currentColor" fill-opacity=".2" stroke="none"/><circle cx="16" cy="17.5" r="2.4"/></symbol>
+    <symbol id="i-sound" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" fill-opacity=".2" stroke="none" d="M4 9.5h2.8l4.7-4v13l-4.7-4H4a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1Z"/><path d="M4 9.5h2.8l4.7-4v13l-4.7-4H4a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1Z"/><path d="M15.6 9a4.2 4.2 0 0 1 0 6M18.4 6.4a8 8 0 0 1 0 11.2"/></symbol>
+    <symbol id="i-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" fill-opacity=".2" stroke="none" d="M12 3.5a8.5 8.5 0 1 0 0 17c1.5 0 2.1-1.1 1.6-2.2-.5-1.2.3-2.4 1.7-2.4H17a3.5 3.5 0 0 0 3.5-3.5C20.5 6.9 16.8 3.5 12 3.5Z"/><path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.5 0 2.1-1.1 1.6-2.2-.5-1.2.3-2.4 1.7-2.4H17a3.5 3.5 0 0 0 3.5-3.5C20.5 6.9 16.8 3.5 12 3.5Z"/><path d="M7.8 11.2h.01" stroke-width="2.6"/><path d="M10.2 7.6h.01" stroke-width="2.6"/><path d="M14.6 7.6h.01" stroke-width="2.6"/></symbol>
+    <symbol id="i-timer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5" fill="currentColor" fill-opacity=".2" stroke="none"/><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.6v4l2.6 1.6M9.5 3h5"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" fill-opacity=".2" stroke="none" d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.8" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-smile" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" fill="currentColor" fill-opacity=".2" stroke="none"/><circle cx="12" cy="12" r="9"/><path d="M8.4 14.4a4.2 4.2 0 0 0 7.2 0"/><path d="M9 9.7h.01" stroke-width="2.6"/><path d="M15 9.7h.01" stroke-width="2.6"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" fill-opacity=".2" stroke="none" d="M4 20h4L19.2 8.8a2.1 2.1 0 0 0 0-3l-1-1a2.1 2.1 0 0 0-3 0L4 16v4Z"/><path d="M4 20h4L19.2 8.8a2.1 2.1 0 0 0 0-3l-1-1a2.1 2.1 0 0 0-3 0L4 16v4Z"/><path d="m13.5 6.5 4 4"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" fill-opacity=".2" stroke="none" d="M4 6.6A2.6 2.6 0 0 1 6.6 4h10.8A2.6 2.6 0 0 1 20 6.6v7.8a2.6 2.6 0 0 1-2.6 2.6H11l-4.4 3.5V17A2.6 2.6 0 0 1 4 14.4V6.6Z"/><path d="M4 6.6A2.6 2.6 0 0 1 6.6 4h10.8A2.6 2.6 0 0 1 20 6.6v7.8a2.6 2.6 0 0 1-2.6 2.6H11l-4.4 3.5V17A2.6 2.6 0 0 1 4 14.4V6.6Z"/><path d="M8.5 9.5h7M8.5 12.5h4"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5.5m5.5-6-6 6 6 6"/></symbol>
+    <symbol id="i-hash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.6 4 8 20M16 4l-1.6 16M4.5 9h16M3.5 15h16"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" fill-opacity=".2" stroke="none" d="M12 21s6.5-5.6 6.5-11a6.5 6.5 0 0 0-13 0c0 5.4 6.5 11 6.5 11Z"/><path d="M12 21s6.5-5.6 6.5-11a6.5 6.5 0 0 0-13 0c0 5.4 6.5 11 6.5 11Z"/><circle cx="12" cy="10" r="2.3"/></symbol>
+    <symbol id="i-reply" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 7 4 12l5.5 5"/><path d="M4 12h9a7 7 0 0 1 7 7"/></symbol>
+    </defs>
 </svg>
 
 <!-- Login -->
@@ -668,7 +1003,7 @@ input, select, textarea { font-size: 16px; }
               <div class="emoji-tools">
                 <label class="forum-upload btn ghost sm" for="forumMessageFiles"><svg><use href="#i-image"/></svg> Add images <span id="forumImageCount">0/4</span></label>
                 <input id="forumMessageFiles" type="file" accept="image/*" multiple>
-                <button class="btn ghost sm" type="button" data-emoji-target="forumMessageText">😊 Emoji</button>
+                <button class="btn ghost sm" type="button" data-emoji-target="forumMessageText"><svg class="ic"><use href="#i-smile"/></svg>Emoji</button>
                 <button class="btn ghost sm staff-mention hide" type="button" data-mention-target="forumMessageText">@everyone</button>
               </div>
               <button class="btn sm" id="forumSendBtn" type="submit">Send message</button>
@@ -685,7 +1020,7 @@ input, select, textarea { font-size: 16px; }
       <form class="card ann-compose hide" id="announcementForm">
         <div class="field"><label for="announcementText">Nouvelle annonce</label><textarea id="announcementText" maxlength="4000" placeholder="Écris une annonce pour les membres…"></textarea></div>
         <div class="forum-preview" id="announcementPreview"></div>
-        <div class="ann-compose-foot"><div class="emoji-tools"><label class="forum-upload btn ghost sm" for="announcementFiles"><svg><use href="#i-image"/></svg> Ajouter des images <span id="announcementImageCount">0/4</span></label><input id="announcementFiles" type="file" accept="image/*" multiple style="display:none"><button class="btn ghost sm" type="button" data-emoji-target="announcementText">😊 Emoji</button><button class="btn ghost sm staff-mention hide" type="button" data-mention-target="announcementText">@everyone</button></div><button class="btn" id="announcementSend" type="submit">Publier</button></div>
+        <div class="ann-compose-foot"><div class="emoji-tools"><label class="forum-upload btn ghost sm" for="announcementFiles"><svg><use href="#i-image"/></svg> Ajouter des images <span id="announcementImageCount">0/4</span></label><input id="announcementFiles" type="file" accept="image/*" multiple style="display:none"><button class="btn ghost sm" type="button" data-emoji-target="announcementText"><svg class="ic"><use href="#i-smile"/></svg>Emoji</button><button class="btn ghost sm staff-mention hide" type="button" data-mention-target="announcementText">@everyone</button></div><button class="btn" id="announcementSend" type="submit">Publier</button></div>
         <div class="err" id="announcementErr"></div>
       </form>
       <div class="ann-list" id="announcementList"><div class="forum-empty">Chargement des annonces…</div></div>
@@ -703,8 +1038,8 @@ input, select, textarea { font-size: 16px; }
     <!-- Take quiz -->
     <section id="v-take" class="hide">
       <div class="top"><div><h2 id="takeTitle"></h2><p class="mut" id="takeDesc"></p></div></div>
-      <div class="qtimer hide" id="qTimer">⏱ <b id="qTimeLeft">--:--</b><div class="bar"><i id="qTimeBar"></i></div><span class="mut" id="qTimeTotal"></span></div>
-      <div class="qwatch">👁 Stay on this page: leaving it (other tab, other app) is recorded and shown to the admins. <b id="qLeaves" style="margin-left:auto"></b></div>
+      <div class="qtimer hide" id="qTimer"><svg class="ic big"><use href="#i-timer"/></svg><b id="qTimeLeft">--:--</b><div class="bar"><i id="qTimeBar"></i></div><span class="mut" id="qTimeTotal"></span></div>
+      <div class="qwatch"><svg class="ic big"><use href="#i-eye"/></svg>Stay on this page: leaving it (other tab, other app) is recorded and shown to the admins. <b id="qLeaves" style="margin-left:auto"></b></div>
       <form class="card" id="takeForm">
         <div id="takeQs"></div>
         <div class="err" id="takeErr"></div>
@@ -970,7 +1305,7 @@ function renderSettings() {
   if (admin) views.push(["review", "Review"], ["members", "Members"]);
   const swatches = ACCENTS.map((c) => '<button type="button" class="swatch' + (S.accent.toLowerCase() === c ? " on" : "") + '" style="--c:' + c + '" data-swatch="' + c + '" title="' + c + '"></button>').join("");
   $("settingsBody").innerHTML =
-    '<div class="set-sec"><h3>🔊 Sounds</h3><div class="sd">Every click gets a little sound, generated by your browser.</div>' +
+    '<div class="set-sec"><h3><svg class="ic"><use href="#i-sound"/></svg>Sounds</h3><div class="sd">Every click gets a little sound, generated by your browser.</div>' +
       row("Sound effects", "Master switch for everything below.", sw("sound")) +
       row("Volume", "", '<div style="display:flex;align-items:center;gap:10px"><input class="set-range" type="range" min="0" max="100" step="5" data-s="volume" value="' + S.volume + '"><span class="mono" id="volOut" style="width:42px">' + S.volume + "%</span></div>") +
       '<div class="set-row col"><div class="lb2"><b>Sound pack</b><small>Tap one to hear it.</small></div><div class="packs" data-nosound>' +
@@ -980,20 +1315,20 @@ function renderSettings() {
       row("Typing ticks", "A tiny tap on each key in text fields.", sw("sType")) +
       row("Test", "", '<div class="tests" data-nosound>' + [["click", "Click"], ["nav", "Menu"], ["toggle", "Toggle"], ["success", "Success"], ["error", "Error"], ["open", "Popup"], ["danger", "Delete"]].map((t) => '<button type="button" class="btn ghost sm" data-test="' + t[0] + '">' + t[1] + "</button>").join("") + "</div>") +
     "</div>" +
-    '<div class="set-sec"><h3>🎨 Appearance</h3><div class="sd">Make the panel yours.</div>' +
+    '<div class="set-sec"><h3><svg class="ic"><use href="#i-palette"/></svg>Appearance</h3><div class="sd">Make the panel yours.</div>' +
       row("Accent colour", "", '<div class="swatches">' + swatches + '<input class="set-color" type="color" data-s="accent" value="' + S.accent + '" title="Custom colour"></div>') +
       row("Text size", "", seg("fontSize", [[90, "Small"], [100, "Normal"], [115, "Large"]])) +
       row("Density", "Compact fits more on screen.", seg("density", [["comfortable", "Comfortable"], ["compact", "Compact"]])) +
       row("Background glow", "", sw("glow")) +
       row("Animations", "Turn off for a snappier, calmer panel.", sw("motion")) +
     "</div>" +
-    '<div class="set-sec"><h3>⚙️ Behaviour</h3><div class="sd">How the panel works for you.</div>' +
+    '<div class="set-sec"><h3><svg class="ic"><use href="#i-sliders"/></svg>Behaviour</h3><div class="sd">How the panel works for you.</div>' +
       row("Start page", "What opens after you sign in.", '<select class="set-select" data-s="startView">' + views.map((v) => '<option value="' + v[0] + '"' + (S.startView === v[0] ? " selected" : "") + ">" + v[1] + "</option>").join("") + "</select>") +
       row("Notification time", "How long toasts stay on screen.", seg("toastSec", [[2, "2 s"], [3.2, "3 s"], [5, "5 s"], [8, "8 s"]])) +
       row("Keyboard shortcuts", "Disabled while you take a quiz or type in a field.", sw("shortcuts")) +
       '<div class="keys" style="padding:0 0 12px">' + SHORTCUTS.map((k) => "<div><kbd>" + k[0] + "</kbd> " + k[1] + "</div>").join("") + "</div>" +
     "</div>" +
-    '<div class="set-sec"><h3>👤 Account & data</h3><div class="sd">Settings live in this browser. Export them to move to another device.</div>' +
+    '<div class="set-sec"><h3><svg class="ic"><use href="#i-user"/></svg>Account &amp; data</h3><div class="sd">Settings live in this browser. Export them to move to another device.</div>' +
       row("Profile", "Banner, bio and status.", '<button type="button" class="btn ghost sm" data-act="profile">Edit my profile</button>') +
       row("Backup", "", '<div class="tests"><button type="button" class="btn ghost sm" data-act="export">Export</button><button type="button" class="btn ghost sm" data-act="import">Import</button></div>') +
       row("Reset", "Back to the default look and sounds.", '<button type="button" class="btn danger sm" data-act="reset">Reset settings</button>') +
@@ -1272,7 +1607,7 @@ async function showProfileCard(data) {
         <img class="profile-pop-avatar" src="${esc(user.avatar || "https://cdn.discordapp.com/embed/avatars/0.png")}" alt="" style="${acc ? `border-color:${esc(acc)}` : ""}">
         <div class="profile-pop-name">${esc(user.name || "Member")}</div>
         <div class="profile-pop-meta">${user.role ? `<span class="role ${esc(user.role)}">${esc(user.role)}</span>` : ""}${user.username ? ` · @${esc(user.username)}` : ""}</div>
-        ${user.status ? `<div class="profile-pop-status">💬 ${esc(user.status)}</div>` : ""}
+        ${user.status ? `<div class="profile-pop-status"><svg class="ic"><use href="#i-chat"/></svg>${esc(user.status)}</div>` : ""}
         ${user.bio ? `<div class="profile-pop-bio">${esc(user.bio)}</div>` : ""}
         ${info ? `<div class="profile-pop-stats">
           <div><b>${info.logs}</b><span>Logs</span></div>
@@ -1280,7 +1615,7 @@ async function showProfileCard(data) {
           <div><b>${pfDate(user.joined)}</b><span>Member since</span></div>
           <div><b>${user.seen ? pfDate(user.seen) : "—"}</b><span>Last login</span></div>
         </div>` : '<div class="profile-pop-meta" style="margin-top:12px">Loading…</div>'}
-        ${own ? `<div class="profile-pop-actions"><button class="btn sm" type="button" data-edit-profile>✏️ Edit profile</button></div>` : ""}
+        ${own ? `<div class="profile-pop-actions"><button class="btn sm" type="button" data-edit-profile><svg class="ic"><use href="#i-edit"/></svg>Edit profile</button></div>` : ""}
       </div></div>`;
     const ed = overlay.querySelector("[data-edit-profile]");
     if (ed) ed.onclick = () => { close(); editProfile(); };
@@ -1763,15 +2098,20 @@ function renderQuizzes() {
   $("quizList").innerHTML = allQuizzes.map((q, i) => {
     const s = mySub(q.id);
     let btn;
-    if (!s || s.status === "failed") btn = `<button class="btn sm" data-take="${esc(q.id)}">${s ? "Retake" : "Start"}</button>`;
+    if ((!s || s.status === "failed") && !q.live && !admin) btn = `<button class="btn sm ghost" disabled>${ico("timer")}Waiting for an admin to start</button>`;
+    else if (!s || s.status === "failed") btn = `<button class="btn sm" data-take="${esc(q.id)}">${s ? "Retake" : "Start"}</button>`;
     else if (s.status === "pending") btn = `<button class="btn sm ghost" disabled>Awaiting review</button>`;
     else btn = `<button class="btn sm ok" disabled>Completed</button>`;
-    const adm = admin ? `<button class="btn sm ghost" data-edit="${esc(q.id)}">Edit</button><button class="btn sm danger" data-delq="${esc(q.id)}" data-n="${esc(q.title)}">Delete</button>` : "";
+    const gate = admin ? (q.live
+      ? `<button class="btn sm danger" data-stop="${esc(q.id)}" data-n="${esc(q.title)}">Stop</button>`
+      : `<button class="btn sm ok" data-start="${esc(q.id)}" data-n="${esc(q.title)}">${ico("check")}Start for everyone</button>`) : "";
+    const adm = admin ? gate + `<button class="btn sm ghost" data-edit="${esc(q.id)}">Edit</button><button class="btn sm danger" data-delq="${esc(q.id)}" data-n="${esc(q.title)}">Delete</button>` : "";
     const res = s ? `<div class="row">${statBadge(s.status)}${s.pct != null ? `<span class="mut">${s.pct}% on multiple choice</span>` : ""}</div>${s.feedback ? `<div class="fb">“${esc(s.feedback)}”</div>` : ""}` : "";
     return `<div class="qz" style="animation-delay:${Math.min(i, 10) * 30}ms">
       <h3>${esc(q.title)}</h3>
+      <div class="row"><span class="badge" style="--c:${q.live ? "var(--unban)" : "var(--dim)"}">${q.live ? "Live — open to everyone" : "Locked — not started"}</span></div>
       ${q.description ? `<div class="mut">${esc(q.description)}</div>` : ""}
-      <div class="meta">${q.questions.length} question${q.questions.length > 1 ? "s" : ""}${q.timeLimit ? " · ⏱ " + fmtLimit(q.timeLimit) : ""}</div>
+      <div class="meta">${q.questions.length} question${q.questions.length > 1 ? "s" : ""}${q.timeLimit ? " · " + fmtLimit(q.timeLimit) : ""}</div>
       ${res}
       <div class="row">${btn}${adm}</div>
     </div>`;
@@ -1779,6 +2119,16 @@ function renderQuizzes() {
 }
 $("quizList").addEventListener("click", async (e) => {
   const t = e.target.closest("[data-take]"), ed = e.target.closest("[data-edit]"), dq = e.target.closest("[data-delq]");
+  const st = e.target.closest("[data-start]"), sp = e.target.closest("[data-stop]");
+  if (st || sp) {
+    const el = st || sp, starting = !!st;
+    if (!(await confirmBox(starting ? "Start “" + el.dataset.n + "” for everyone?" : "Stop “" + el.dataset.n + "”?",
+      starting ? "Every approved member will be able to start it right away." : "Members can no longer start it, and anyone currently answering will not be able to submit.",
+      starting ? "Start" : "Stop"))) return;
+    try { await api("/api/quizzes", { method: "POST", body: { id: el.dataset.start || el.dataset.stop, action: starting ? "start" : "stop" } }); toast(starting ? "Quiz started for everyone" : "Quiz stopped"); loadQuizzes(); }
+    catch (err) { toast(err.message, true); }
+    return;
+  }
   if (t) return startTake(t.dataset.take);
   if (ed) return editQuiz(ed.dataset.edit);
   if (dq) {
@@ -1788,10 +2138,18 @@ $("quizList").addEventListener("click", async (e) => {
   }
 });
 
+/* members: refresh quietly so the Start button appears as soon as an admin opens the quiz */
+setInterval(async () => {
+  const v = $("v-quizzes");
+  if (!v || v.classList.contains("hide") || document.hidden) return;
+  try { allQuizzes = await api("/api/quizzes"); renderQuizzes(); } catch (_) {}
+}, 8000);
+
 /* answering */
 function startTake(id) {
   taking = allQuizzes.find((q) => q.id === id);
   if (!taking) return;
+  if (!taking.live && !admin) { toast("An admin has not started this quiz yet.", true); taking = null; return; }
   $("takeTitle").textContent = taking.title;
   $("takeDesc").textContent = taking.description || "";
   $("takeErr").textContent = "";
@@ -1988,7 +2346,7 @@ function renderSub(s, i) {
     <div class="h"><img class="av" src="${esc(s.avatar || "https://cdn.discordapp.com/embed/avatars/0.png")}" alt="">
       <div><b>${esc(s.name)}</b> <span class="mut">answered</span> <b>${esc(s.quizTitle)}</b><div class="time dim" style="font-size:12.5px">${fmt(s.at)}${s.pct != null ? " · " + s.pct + "% on multiple choice" : ""}${s.timeUp ? " · ⏱ time ran out" : ""}</div></div>
       <span style="margin-left:auto">${statBadge(s.status)}</span></div>
-    ${s.leaves != null ? `<div class="leftflag ${s.leaves ? "bad" : "ok"}">${s.leaves ? "👁 Left the page " + s.leaves + " time" + (s.leaves > 1 ? "s" : "") + " · " + fmtAway(s.awaySec) + " away" : "👁 Stayed on the page the whole time"}</div>` : ""}
+    ${s.leaves != null ? `<div class="leftflag ${s.leaves ? "bad" : "ok"}">${s.leaves ? "Left the page " + s.leaves + " time" + (s.leaves > 1 ? "s" : "") + " · " + fmtAway(s.awaySec) + " away" : "👁 Stayed on the page the whole time"}</div>` : ""}
     <details ${pend ? "open" : ""}><summary>Answers</summary>${answers}</details>
     ${info}
     <textarea data-fb maxlength="1000" placeholder="Feedback for the member (optional)">${esc(s.feedback || "")}</textarea>
@@ -2037,6 +2395,26 @@ init();
     window.visualViewport.addEventListener('resize', updateMobileViewport, { passive: true });
   }
 })();
+
+/* spotlight qui suit la souris sur les cartes (léger, délégué, passif) */
+(function () {
+  if (matchMedia("(hover:none)").matches) return;
+  var SEL = ".stat,.log,.mem,.qz,.sub,.ann-card,.topic,.panel,.card,.form";
+  var raf = 0, ev = null;
+  document.addEventListener("pointermove", function (e) {
+    ev = e;
+    if (raf) return;
+    raf = requestAnimationFrame(function () {
+      raf = 0;
+      var el = ev.target && ev.target.closest && ev.target.closest(SEL);
+      if (!el) return;
+      var r = el.getBoundingClientRect();
+      el.style.setProperty("--mx", (ev.clientX - r.left) + "px");
+      el.style.setProperty("--my", (ev.clientY - r.top) + "px");
+    });
+  }, { passive: true });
+})();
+
 </script>
 
 </body>
