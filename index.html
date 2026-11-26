@@ -854,6 +854,20 @@ svg.ic.big{width:1.35em;height:1.35em}
   #leaderboardUpdated{font-size:10px;text-align:right}
 }
 
+
+.staff-presence{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--mut)}
+.staff-presence:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--mut)}
+.staff-presence.online:before{background:#35c98a}.staff-presence.recent:before{background:#e8b44d}
+.appeal-card{padding:16px;margin:12px 0;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+.appeal-meta{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.appeal-status{font-size:11px;padding:4px 8px;border-radius:20px;background:var(--panel2);color:var(--mut)}
+.appeal-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.appearance-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.appearance-option{border:1px solid var(--line);background:var(--panel);padding:14px;border-radius:12px;text-align:left;color:var(--text);cursor:pointer}
+.appearance-option.active{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+@media(max-width:650px){#v-appeals .card{padding:14px}.appeal-meta{display:block}}
+
+html[data-theme="light"]{--bg:#f4f6fb;--panel:#fff;--panel2:#edf0f7;--text:#202536;--mut:#697287;--line:#e1e5ef;--line2:#d5dbea;color-scheme:light}html[data-theme="dark"]{color-scheme:dark}
 </style>
 </head>
 <body>
@@ -927,6 +941,8 @@ svg.ic.big{width:1.35em;height:1.35em}
     <button class="nav" data-view="warns"><svg><use href="#i-warn"/></svg>Warns</button>
     <button class="nav" data-view="analytics"><svg><use href="#i-chart"/></svg>Analytics</button>
     <button class="nav" data-view="leaderboard"><svg><use href="#i-star"/></svg>Staff leaderboard</button>
+    <button class="nav" data-view="staff"><svg><use href="#i-users"/></svg>Staff activity</button>
+    <button class="nav" data-view="appeals"><svg><use href="#i-inbox"/></svg>Appeals</button>
     <button class="nav" data-view="new"><svg><use href="#i-plus"/></svg>New log</button>
     <button class="nav" data-view="quizzes"><svg><use href="#i-quiz"/></svg>Quizzes</button>
     <button class="nav" data-view="forums"><svg><use href="#i-users"/></svg>Forums</button>
@@ -1153,6 +1169,22 @@ svg.ic.big{width:1.35em;height:1.35em}
       <p class="mut lb-footnote">Only actions present in the moderation logs are counted. The leaderboard uses the latest 200 logs available to this panel.</p>
     </section>
 
+    <section id="v-staff" class="hide">
+      <div class="top"><div><h2>Staff activity</h2><p class="mut">Team presence and latest moderation activity.</p></div><button class="btn ghost" id="staffRefresh">Refresh</button></div>
+      <div class="stats" id="staffStats"></div>
+      <div class="card lb-table-wrap"><div class="lb-table-head"><div><b>Team directory</b><div class="mut">Presence estimated from latest recorded activity.</div></div></div><div id="staffRows"></div></div>
+    </section>
+    <section id="v-appeals" class="hide">
+      <div class="top"><div><h2>Appeals</h2><p class="mut">Submit and review moderation appeals.</p></div></div>
+      <div class="stats" id="appealStats"></div>
+      <div class="card" style="padding:18px;margin-bottom:16px">
+        <h3 style="margin:0 0 8px">Submit an appeal</h3><p class="mut">Include the moderation action and explain why it should be reviewed.</p>
+        <input id="appealSubject" maxlength="100" placeholder="Subject / moderation log ID">
+        <textarea id="appealText" maxlength="2000" rows="3" placeholder="Your explanation…"></textarea>
+        <button class="btn" id="appealSubmit">Submit appeal</button>
+      </div>
+      <div id="appealList"></div>
+    </section>
     <!-- Settings view -->
     <section id="v-settings" class="hide">
       <div class="top"><div><h2>Settings</h2><p class="mut">Sounds, look and behaviour. Saved on this device only.</p></div></div>
@@ -1166,6 +1198,8 @@ svg.ic.big{width:1.35em;height:1.35em}
     <button class="nav" data-view="warns"><svg><use href="#i-warn"/></svg>Warns</button>
     <button class="nav" data-view="analytics"><svg><use href="#i-chart"/></svg>Stats</button>
     <button class="nav" data-view="leaderboard"><svg><use href="#i-star"/></svg>Staff</button>
+    <button class="nav" data-view="staff"><svg><use href="#i-users"/></svg>Staff</button>
+    <button class="nav" data-view="appeals"><svg><use href="#i-inbox"/></svg>Appeals</button>
     <button class="nav" data-view="new"><svg><use href="#i-plus"/></svg>New</button>
     <button class="nav" data-view="quizzes"><svg><use href="#i-quiz"/></svg>Quiz</button>
     <button class="nav" data-view="forums"><svg><use href="#i-users"/></svg>Forums</button>
@@ -1180,6 +1214,7 @@ svg.ic.big{width:1.35em;height:1.35em}
 <div class="toasts" id="toasts"></div>
 
 <script>
+(()=>{const t=localStorage.getItem('channeltool-theme');if(t&&t!=='system')document.documentElement.dataset.theme=t;})();
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const show = (id) => ["login", "blocked", "app"].forEach((x) => $(x).classList.toggle("hide", x !== id));
@@ -1236,12 +1271,15 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.q
 function go(view) {
   if (view !== "take" && typeof stopTimer === "function" && qTick) stopTimer();
   if (view !== "take" && typeof stopWatch === "function" && watch) stopWatch(false);
-  ["logs", "warns", "analytics", "leaderboard", "new", "members", "quizzes", "take", "builder", "review", "forums", "announcements", "settings"].forEach((v) => { const el = $("v-" + v); if (el) el.classList.toggle("hide", v !== view); });
+  ["logs", "warns", "analytics", "leaderboard", "staff", "appeals", "new", "members", "quizzes", "take", "builder", "review", "forums", "announcements", "settings"].forEach((v) => { const el = $("v-" + v); if (el) el.classList.toggle("hide", v !== view); });
   const navView = ["take", "builder"].includes(view) ? "quizzes" : view;
   document.querySelectorAll(".nav[data-view]").forEach((n) => n.classList.toggle("on", n.dataset.view === navView));
   if (view === "quizzes") loadQuizzes();
   if (view === "review") loadSubs();
   if (view === "logs" || view === "warns" || view === "leaderboard") loadLogs();
+  if (view === "staff") { loadUsers().then(renderStaffActivity); }
+  if (view === "appeals") loadAppeals();
+  if (view === "settings") renderAppearanceSettings();
   if (view === "analytics") loadAnalytics();
   if (view === "members") loadUsers();
   if (view === "forums") loadForums();
@@ -1901,6 +1939,56 @@ function renderStats() {
   $("stats").innerHTML = s.map(([k, v, i, c, sm]) =>
     `<div class="stat" style="--c:${c}"><div class="k" style="color:${c}">${ico(i)}<span class="mut">${k}</span></div><div class="v ${sm ? "small" : ""}" title="${esc(v)}">${esc(v)}</div></div>`).join("");
 }
+
+function renderStaffActivity(){
+  const staff=(Array.isArray(allUsers)?allUsers:[]).filter(u=>!["pending","banned"].includes(u.role));
+  const now=Date.now(), logs=allLogs.slice(0,200);
+  const rows=staff.map(u=>{
+    const own=logs.filter(l=>String(l.uid)===String(u.id));
+    const seen=u.seen?new Date(u.seen).getTime():0, lastLog=own[0]?new Date(own[0].at).getTime():0;
+    const last=Math.max(seen,lastLog), age=last?now-last:Infinity;
+    const status=age<300000?"online":age<86400000?"recent":"";
+    return {...u,ownCount:own.length,last,status,label:status==="online"?"Active recently":status==="recent"?"Seen today":"No recent activity"};
+  }).sort((a,b)=>b.last-a.last);
+  const active=rows.filter(x=>x.status==="online").length;
+  $("staffStats").innerHTML=[["Team members",rows.length],["Active recently",active],["Actions in loaded logs",logs.length]].map(([k,v])=>`<div class="stat"><div class="k mut">${esc(k)}</div><div class="v">${v}</div></div>`).join("");
+  $("staffRows").innerHTML=rows.length?rows.map(u=>`<div class="lb-row"><div class="lb-person">${u.avatar?`<img class="lb-avatar" src="${esc(u.avatar)}" alt="">`:`<div class="lb-avatar"></div>`}<div style="min-width:0"><div class="lb-person-name">${esc(u.name||u.username||"Staff member")}</div><span class="staff-presence ${u.status}">${u.label}</span></div></div><div class="lb-breakdown"><span class="lb-tag">${esc(u.role||"staff")}</span><span class="lb-tag">${u.ownCount} logged actions</span></div><div class="lb-total">${u.last?new Date(u.last).toLocaleDateString():"—"}</div></div>`).join(""):`<div class="lb-empty">No staff data available.</div>`;
+}
+async function loadAppeals(){
+  try{
+    const data=await api("/api/tickets"), tickets=Array.isArray(data)?data:[];
+    const appeals=tickets.filter(t=>/^appeal:/i.test(t.subject||""));
+    const open=appeals.filter(t=>t.status!=="closed").length;
+    $("appealStats").innerHTML=[["Appeals",appeals.length],["Open",open],["Closed",appeals.length-open]].map(([k,v])=>`<div class="stat"><div class="k mut">${k}</div><div class="v">${v}</div></div>`).join("");
+    $("appealList").innerHTML=appeals.length?appeals.map(t=>`<div class="appeal-card"><div class="appeal-meta"><b>${esc(t.subject)}</b><span class="appeal-status">${esc(t.status||"open")}</span></div><div class="mut" style="margin:5px 0 10px">${esc(t.name||"User")} · ${new Date(t.updated||t.at).toLocaleString()}</div>${(t.messages||[]).map(m=>`<div style="padding:8px 0;border-top:1px solid var(--line)"><b>${esc(m.name||"User")}</b><p>${esc(m.text||"")}</p></div>`).join("")}<div class="appeal-actions"><input data-appeal-reply="${esc(t.id)}" placeholder="Write a reply…"><button class="btn" data-appeal-send="${esc(t.id)}">Reply</button>${admin&&t.status!=="closed"?`<button class="btn ghost" data-appeal-close="${esc(t.id)}">Close appeal</button>`:""}</div></div>`).join(""):`<div class="lb-empty">No appeals yet.</div>`;
+  }catch(e){$("appealList").innerHTML=`<div class="lb-empty">Appeals unavailable: ${esc(e.message||"API error")}</div>`;}
+}
+$("appealSubmit").addEventListener("click",async()=>{
+  const subject=$("appealSubject").value.trim(),text=$("appealText").value.trim();
+  if(!subject||!text)return toast("Add a subject and explanation.");
+  try{await api("/api/tickets",{method:"POST",body:{subject:"Appeal: "+subject,text}});$("appealSubject").value="";$("appealText").value="";toast("Appeal submitted.");loadAppeals();}
+  catch(e){toast(e.message||"Could not submit appeal.");}
+});
+$("appealList").addEventListener("click",async e=>{
+  const send=e.target.closest("[data-appeal-send]"),close=e.target.closest("[data-appeal-close]");
+  try{
+    if(send){const id=send.dataset.appealSend,field=[...document.querySelectorAll("[data-appeal-reply]")].find(x=>x.dataset.appealReply===id);if(!field||!field.value.trim())return;await api("/api/tickets",{method:"POST",body:{id,text:field.value.trim()}});loadAppeals();}
+    if(close){await api("/api/tickets",{method:"PUT",body:{id:close.dataset.appealClose,status:"closed"}});loadAppeals();}
+  }catch(err){toast(err.message||"Action failed.");}
+});
+$("staffRefresh").addEventListener("click",async()=>{try{await loadUsers();await loadLogs();renderStaffActivity();}catch(e){toast("Refresh failed.");}});
+function renderAppearanceSettings(){
+  const target=$("settingsBody");if(!target||target.dataset.appearanceAdded)return;target.dataset.appearanceAdded="1";
+  const current=localStorage.getItem("channeltool-theme")||"system";
+  target.insertAdjacentHTML("beforeend",`<div class="card" style="padding:18px;margin-top:14px"><h3>Appearance</h3><p class="mut">Theme preference saved on this device.</p><div class="appearance-grid"><button class="appearance-option ${current==="system"?"active":""}" data-theme-choice="system">System default</button><button class="appearance-option ${current==="dark"?"active":""}" data-theme-choice="dark">Dark mode</button><button class="appearance-option ${current==="light"?"active":""}" data-theme-choice="light">Light mode</button></div></div>`);
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-theme-choice]");if(!b)return;
+  const theme=b.dataset.themeChoice;localStorage.setItem("channeltool-theme",theme);
+  if(theme==="system")delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=theme;
+  document.querySelectorAll("[data-theme-choice]").forEach(x=>x.classList.toggle("active",x===b));
+});
+
 function renderLeaderboard() {
   const now = Date.now();
   const cutoff = leaderboardPeriod === "all" ? 0 : now - Number(leaderboardPeriod) * 86400000;
