@@ -26,6 +26,9 @@ module.exports = handle(async (req, res, redis) => {
     const raw = await redis.hget("quizzes", String(b.quizId || ""));
     if (!raw) return res.status(404).json({ error: "Quiz not found." });
     const quiz = JSON.parse(raw);
+    if (!quiz.live && !["owner", "admin", "developer"].includes(u.role)) {
+      return res.status(403).json({ error: "This quiz has not been started by an admin yet." });
+    }
 
     const mine = (await loadAll()).filter((s) => s.uid === u.id && s.quizId === quiz.id);
     if (mine.some((s) => s.status === "pending")) return res.status(409).json({ error: "You already have a submission waiting for review." });

@@ -5,6 +5,7 @@ const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2
 // What non-admins get: no correct answers.
 const strip = (q) => ({
   id: q.id, title: q.title, description: q.description, passScore: q.passScore, timeLimit: q.timeLimit || 0, at: q.at,
+  live: !!q.live, startedAt: q.startedAt || null,
   questions: q.questions.map((x) => ({ type: x.type, q: x.q, options: x.options || [] })),
 });
 
@@ -48,6 +49,16 @@ module.exports = handle(async (req, res, redis) => {
 
   if (req.method === "POST") {
     const b = req.body || {};
+    // Admin gate: a quiz stays locked until an admin starts it for everyone.
+    if (b.action === "start" || b.action === "stop") {
+      const raw = await redis.hget("quizzes", String(b.id || ""));
+      if (!raw) return res.status(404).json({ error: "Quiz not found." });
+      const q = JSON.parse(raw);
+      if (b.action === "start") { q.live = true; q.startedAt = new Date().toISOString(); q.startedBy = u.id; q.startedByName = u.name; }
+      else { q.live = false; q.stoppedAt = new Date().toISOString(); }
+      await redis.hset("quizzes", q.id, JSON.stringify(q));
+      return res.status(200).json(q);
+    }
     const c = clean(b);
     if (c.error) return res.status(400).json({ error: c.error });
     let quiz;
