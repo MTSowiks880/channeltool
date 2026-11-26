@@ -1011,7 +1011,13 @@ async function loadAnalytics() {
   $("analyticsError").textContent = "Loading analytics…";
   document.querySelectorAll("#analyticsPeriods [data-period]").forEach(b => b.classList.toggle("on", b.dataset.period === analyticsPeriod));
   try {
-    const data = await api("/api/logs?stats=1");
+    let data = await api("/api/logs?stats=1");
+    if (Array.isArray(data)) {
+      // Ancien backend sans ?stats=1 : on retombe sur la liste des logs + les tickets.
+      let tk = [];
+      try { tk = await api("/api/tickets"); } catch (e) {}
+      data = { logs: data, tickets: Array.isArray(tk) ? tk : [] };
+    }
     const s = calculateAnalytics(data.logs || [], data.tickets || [], analyticsPeriod);
     const total = s.logs.length, top = s.mods[0];
     $("analyticsKpis").innerHTML = [["Total actions", total, "var(--acc)"], ["Active moderators", s.mods.length, "var(--mute)"], ["Tickets", s.tickets.length, "var(--kick)"], ["Ticket close rate", (s.tickets.length ? (s.closed / s.tickets.length * 100).toFixed(1) : "0.0") + "%", "var(--unban)"]].map(([k,v,c]) => `<div class="stat" style="--c:${c}"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join("");
