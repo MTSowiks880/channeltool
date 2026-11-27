@@ -26,7 +26,7 @@ module.exports = handle(async (req, res, redis) => {
     const raw = await redis.hget("quizzes", String(b.quizId || ""));
     if (!raw) return res.status(404).json({ error: "Quiz not found." });
     const quiz = JSON.parse(raw);
-    if (!quiz.live && !["owner", "admin", "developer"].includes(u.role)) {
+    if (!quiz.live && !["owner", "admin", "developer", "trainer"].includes(u.role)) {
       return res.status(403).json({ error: "This quiz has not been started by an admin yet." });
     }
 

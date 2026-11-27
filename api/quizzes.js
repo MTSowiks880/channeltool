@@ -1,4 +1,4 @@
-const { clip, handle, getUser, isAdmin, canPost } = require("../lib/util");
+const { clip, handle, getUser, isAdmin, canPost, canQuiz } = require("../lib/util");
 
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
@@ -42,10 +42,10 @@ module.exports = handle(async (req, res, redis) => {
   if (req.method === "GET") {
     const all = Object.values(await redis.hgetall("quizzes")).map((r) => JSON.parse(r));
     all.sort((a, b) => b.at.localeCompare(a.at));
-    return res.status(200).json(isAdmin(u) ? all : all.map(strip));
+    return res.status(200).json(canQuiz(u) ? all : all.map(strip));
   }
 
-  if (!isAdmin(u)) return res.status(403).json({ error: "Admins only." });
+  if (!canQuiz(u)) return res.status(403).json({ error: "Admins and trainers only." });
 
   if (req.method === "POST") {
     const b = req.body || {};
