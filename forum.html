@@ -509,7 +509,7 @@ function openThread(id) {
   active = threads.find(t => t.id === id);
   if (!active) return;
   show("threadView");
-  const canDelete = me && (me.role === "owner" || me.role === "admin" || active.uid === me.id);
+  const canDelete = me && (["owner", "developer", "admin"].includes(me.role) || active.uid === me.id);
   const posts = [{author:active.author,avatar:active.avatar,body:active.body,at:active.at},...(active.replies || [])];
   $("threadContent").innerHTML = `
     <article class="panel">

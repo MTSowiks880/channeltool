@@ -97,6 +97,7 @@ main{padding:28px 36px 80px;max-width:1100px;width:100%}
   border-radius:99px;padding:2px 8px;border:1px solid}
 .role::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 .role.owner{color:#fbbf24;border-color:rgba(251,191,36,.3);background:rgba(251,191,36,.08)}
+.role.developer{color:#f472b6;border-color:rgba(244,114,182,.35);background:rgba(244,114,182,.08)}
 .role.admin{color:var(--acc2);border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.08)}
 .role.mod{color:var(--mute);border-color:rgba(76,194,255,.3);background:rgba(76,194,255,.08)}
 .role.pending{color:var(--warn);border-color:rgba(245,181,68,.3);background:rgba(245,181,68,.08)}
@@ -661,6 +662,7 @@ main>section,main>div[id],.shell main>section{animation:rise .55s var(--ease) bo
 .thumbs img:hover{transform:scale(1.06) rotate(-.6deg);box-shadow:0 16px 32px -12px rgba(0,0,0,.8)}
 .role{backdrop-filter:blur(4px)}
 .role.owner{box-shadow:0 0 18px -4px rgba(251,191,36,.45)}
+.role.developer{box-shadow:0 0 18px -4px rgba(244,114,182,.45)}
 
 /* ---------- chips / onglets / segments ---------- */
 .chip{transition:all .25s var(--ease)}
@@ -1497,7 +1499,7 @@ function renderSettings() {
 
 /* staff forums */
 let forumChannels = [], forumActiveId = null, forumImages = [];
-const forumCanManage = () => !!me && ["mod", "admin", "owner"].includes(me.role);
+const forumCanManage = () => !!me && ["mod", "admin", "developer", "owner"].includes(me.role);
 
 async function loadForums() {
   $("forumChannels").innerHTML = '<div class="forum-empty">Loading channels…</div>';
@@ -1543,7 +1545,7 @@ async function openForumChannel(id, refreshList = true) {
   $("forumRoomDesc").textContent = channel.description || ("Created by " + channel.createdByName);
   $("forumMessages").innerHTML = '<div class="forum-empty">Loading messages…</div>';
   $("forumMessageForm").classList.remove("hide");
-  const canDelete = me && (me.role === "owner" || me.role === "admin" || channel.createdBy === me.id);
+  const canDelete = me && (["owner", "developer", "admin"].includes(me.role) || channel.createdBy === me.id);
   $("forumDeleteChannel").classList.toggle("hide", !canDelete);
   try {
     const data = await api("/api/forums?channelId=" + encodeURIComponent(id));
@@ -1576,7 +1578,7 @@ function renderForumMessages(messages) {
         ${m.text ? `<div class="forum-msg-text">${renderChatText(m.text)}</div>` : ""}
         ${(m.images || []).length ? `<div class="forum-msg-images">${m.images.map(src => `<img src="${esc(src)}" alt="Attachment">`).join("")}</div>` : ""}
       </div>
-      ${me && (me.role === "owner" || me.role === "admin" || m.uid === me.id) ? `<button class="icon-btn" title="Delete message" data-forum-message-delete="${esc(m.id)}">×</button>` : ""}
+      ${me && (["owner", "developer", "admin"].includes(me.role) || m.uid === me.id) ? `<button class="icon-btn" title="Delete message" data-forum-message-delete="${esc(m.id)}">×</button>` : ""}
     </div>`).join("");
   $("forumMessages").querySelectorAll(".forum-msg-images img").forEach(img => img.onclick = () => lightbox(img.src));
   $("forumMessages").querySelectorAll("[data-forum-message-delete]").forEach(b => b.onclick = async () => {
@@ -1834,8 +1836,8 @@ async function init() {
   $("meRole").textContent = me.role;
   $("meRole").className = "role " + me.role;
   paintMeCard();
-  admin = me.role === "owner" || me.role === "admin";
-  const canMentionEveryone = ["owner", "admin", "mod"].includes(me.role);
+  admin = ["owner", "developer", "admin"].includes(me.role);
+  const canMentionEveryone = ["owner", "developer", "admin", "mod"].includes(me.role);
   document.querySelectorAll(".staff-mention").forEach((x) => x.classList.toggle("hide", !canMentionEveryone));
   document.querySelectorAll(".adminOnly").forEach((x) => x.classList.toggle("hide", !admin));
   buildChips(); buildActs();
@@ -2257,20 +2259,24 @@ async function loadUsers(silent) {
 }
 function renderUsers() {
   const tabs = [["all", "All"], ["pending", "Pending"], ["team", "Team"], ["banned", "Removed"]];
-  const cnt = (t) => allUsers.filter((u) => t === "all" || (t === "team" ? ["mod", "admin", "owner"].includes(u.role) : u.role === t)).length;
+  const cnt = (t) => allUsers.filter((u) => t === "all" || (t === "team" ? ["mod", "admin", "developer", "owner"].includes(u.role) : u.role === t)).length;
   $("mtabs").innerHTML = tabs.map(([k, n]) => `<button class="tab ${k === userTab ? "on" : ""}" data-t="${k}">${n} <span class="dim">${cnt(k)}</span></button>`).join("");
   $("mtabs").querySelectorAll(".tab").forEach((b) => b.onclick = () => { userTab = b.dataset.t; renderUsers(); });
-  const order = { pending: 0, owner: 1, admin: 2, mod: 3, banned: 4 };
+  const order = { pending: 0, owner: 1, developer: 2, admin: 3, mod: 4, banned: 5 };
   const list = allUsers
-    .filter((u) => userTab === "all" || (userTab === "team" ? ["mod", "admin", "owner"].includes(u.role) : u.role === userTab))
+    .filter((u) => userTab === "all" || (userTab === "team" ? ["mod", "admin", "developer", "owner"].includes(u.role) : u.role === userTab))
     .sort((a, b) => (order[a.role] ?? 9) - (order[b.role] ?? 9));
   if (!list.length) { $("users").innerHTML = `<div class="empty" style="grid-column:1/-1">${ico("users")}<div>Nobody here.</div></div>`; return; }
   $("users").innerHTML = list.map((u, i) => {
     const btns = [];
-    if (u.role !== "owner") {
+    const RK = { banned: 0, pending: 0, mod: 1, admin: 2, developer: 3, owner: 4 };
+    const mr = RK[me.role] || 0, tr = RK[u.role] || 0;
+    if (u.role !== "owner" && tr < mr) {
       if (u.role === "pending" || u.role === "banned") btns.push(["approve", "Approve", "ok"]);
-      if (me.role === "owner" && u.role === "mod") btns.push(["promote", "Make admin", "ghost"]);
-      if (me.role === "owner" && u.role === "admin") btns.push(["demote", "Remove admin", "ghost"]);
+      if (mr >= 3 && tr < 2) btns.push(["promote", "Make admin", "ghost"]);
+      if (mr >= 3 && u.role === "admin") btns.push(["demote", "Remove admin", "ghost"]);
+      if (mr >= 4 && tr < 3) btns.push(["makeDeveloper", "Make developer", "ghost"]);
+      if (mr >= 4 && u.role === "developer") btns.push(["removeDeveloper", "Remove developer", "ghost"]);
       if (u.role !== "banned") btns.push(["kick", "Remove", "danger"]);
     }
     const ban = u.banner ? `background-image:url('${esc(u.banner)}')` : u.color ? `background:${esc(u.color)}` : "";
@@ -2292,7 +2298,7 @@ $("users").addEventListener("click", async (e) => {
   if (a === "kick" && !(await confirmBox("Remove " + n + "?", "They will lose access to the panel.", "Remove"))) return;
   try {
     await api("/api/users", { method: "POST", body: { id: u, action: a } });
-    toast({ approve: "Approved " + n, kick: "Removed " + n, promote: n + " is now admin", demote: n + " is no longer admin" }[a]);
+    toast({ approve: "Approved " + n, kick: "Removed " + n, promote: n + " is now admin", demote: n + " is no longer admin", makeDeveloper: n + " is now developer", removeDeveloper: n + " is no longer developer" }[a]);
     loadUsers();
   } catch (err) { toast(err.message, true); }
 });
