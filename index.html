@@ -100,6 +100,10 @@ main{padding:28px 36px 80px;max-width:1100px;width:100%}
 .adm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
 .adm-card{max-width:none}.adm-card h3{margin:0 0 14px}
 .adm-row{display:flex;gap:8px;align-items:center}.adm-row input,.adm-row select{flex:1;min-width:0}
+.pinbar{padding:10px 14px;border-radius:10px;margin:0 0 14px;font-size:13.5px;border:1px solid var(--line);background:var(--bg2)}
+.pinbar.warn{border-color:rgba(250,204,21,.4);background:rgba(250,204,21,.08)}.pinbar.urgent{border-color:rgba(239,68,68,.5);background:rgba(239,68,68,.1)}
+.adm-note{display:flex;gap:8px;font-size:13px;padding:6px 8px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;margin-top:6px}.adm-note time{margin-left:auto;color:var(--mut);white-space:nowrap}
+.adm-bars{display:flex;align-items:flex-end;gap:2px;height:90px;margin:8px 0}.adm-bars i{flex:1;background:var(--acc);border-radius:2px 2px 0 0;min-height:2px}
 .adm-lock{font-size:12.5px;margin:0 0 12px}
 .adm-log{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow:auto}
 .adm-log div{display:flex;gap:10px;font-size:13px;padding:8px 10px;background:var(--bg2);border:1px solid var(--line);border-radius:9px}
@@ -975,6 +979,7 @@ html[data-theme="light"]{--bg:#f4f6fb;--panel:#fff;--panel2:#edf0f7;--text:#2025
   </aside>
 
   <main>
+    <div id="pinBanner" class="pinbar hide"></div>
     <!-- Logs view -->
     <section id="v-logs">
       <div class="top">
@@ -1171,6 +1176,7 @@ html[data-theme="light"]{--bg:#f4f6fb;--panel:#fff;--panel2:#edf0f7;--text:#2025
         <div class="card adm-card"><h3>Set a member's role</h3>
           <div class="field"><label>Member</label><select id="admUser"></select></div>
           <div class="field"><label>New role</label><select id="admRole"></select></div>
+          <div class="field"><label>Temporary (days, empty = permanent)</label><input id="admTemp" type="number" min="1" max="365" placeholder="e.g. 7"></div>
           <button class="btn" id="admSetRole">Apply role</button>
         </div>
         <div class="card adm-card"><h3>Maintenance</h3>
@@ -1184,6 +1190,30 @@ html[data-theme="light"]{--bg:#f4f6fb;--panel:#fff;--panel2:#edf0f7;--text:#2025
           <div class="field"><select id="admDelUser"></select></div>
           <button class="btn danger" id="admDelete">Delete member</button>
         </div>
+        <div class="card adm-card"><h3>Member tools</h3>
+          <div class="field"><select id="admTool"></select></div>
+          <div class="adm-row" style="flex-wrap:wrap"><button class="btn ghost" id="admKick">Force sign-out</button><button class="btn danger" id="admForum">Delete forum messages</button></div>
+          <div class="field" style="margin-top:12px"><label>Private staff notes</label><div class="adm-row"><input id="admNoteText" maxlength="300" placeholder="e.g. warned twice"><button class="btn" id="admNoteAdd">Add</button></div></div>
+          <div id="admNotes"></div>
+        </div>
+        <div class="card adm-card"><h3>Ban by Discord ID</h3>
+          <div class="adm-row"><input id="admBanId" placeholder="Discord ID"><button class="btn danger" id="admBanBtn">Ban</button></div>
+          <div id="admBans" class="adm-log" style="margin-top:10px;max-height:160px"></div>
+        </div>
+        <div class="card adm-card"><h3>Pinned message</h3>
+          <div class="field"><input id="admPinText" maxlength="400" placeholder="Shown at the top for everyone"></div>
+          <div class="adm-row"><select id="admPinLevel"><option value="info">Info</option><option value="warn">Warning</option><option value="urgent">Urgent</option></select><button class="btn" id="admPin">Pin</button><button class="btn ghost" id="admUnpin">Remove</button></div>
+        </div>
+        <div class="card adm-card"><h3>Maintenance mode</h3>
+          <p class="mut adm-lock" id="admMaintState"></p>
+          <div class="field"><input id="admMaintMsg" maxlength="200" placeholder="Message shown to members"></div>
+          <button class="btn danger" id="admMaint">Turn on</button>
+        </div>
+      </div>
+      <div class="card adm-card" style="margin-top:18px;max-width:none"><h3>Staff activity</h3>
+        <div class="adm-row" style="max-width:200px"><select id="admActDays"><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option></select></div>
+        <div class="mut" style="margin-top:10px">Logs per day (30 days)</div><div class="adm-bars" id="admBars"></div>
+        <div class="adm-grid"><div><b>Ranking</b><div id="admRank" class="adm-log"></div></div><div><b>Inactive staff</b><div id="admIdle" class="adm-log"></div></div><div><b>Recent sign-ins</b><div id="admLogins" class="adm-log"></div></div></div>
       </div>
       <div class="card adm-card" style="margin-top:18px;max-width:none"><h3>Admin activity</h3><div id="admLog" class="adm-log"></div></div>
     </section>
@@ -1849,10 +1879,21 @@ document.addEventListener("click", e => {
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeEmojiPicker(); });
 
+function paintPin() {
+  const el = $("pinBanner"), p = window.__pin;
+  if (!el) return;
+  el.className = "pinbar " + (p ? p.level : "") + (p ? "" : " hide");
+  el.textContent = p ? p.text : "";
+}
 async function init() {
   try {
-    me = (await api("/api/me")).user;
+    const mm = await api("/api/me"); me = mm.user; window.__pin = mm.pin || null;
   } catch (e) {
+    if (e.status === 503) {
+      $("blockedAv").src = ""; $("blockedPulse").classList.add("noring");
+      $("blockedTitle").textContent = "Maintenance"; $("blockedText").textContent = e.message;
+      return show("blocked");
+    }
     show("login");
     if (e.status !== 401) $("loginErr").textContent = e.message;
     return;
@@ -1879,6 +1920,7 @@ async function init() {
   document.querySelectorAll(".staff-mention").forEach((x) => x.classList.toggle("hide", !canMentionEveryone));
   document.querySelectorAll(".adminOnly").forEach((x) => x.classList.toggle("hide", !admin));
   buildChips(); buildActs();
+  paintPin();
   show("app");
   loadLogs();
   if (admin) { loadUsers(true); loadSubs(true); }
@@ -2364,13 +2406,52 @@ async function loadAdmin() {
     $("admLock").textContent = lock ? "Locked: only a developer or the owner can use these maintenance tools." : "These actions cannot be undone.";
     document.querySelectorAll("[data-adm]").forEach((b) => b.disabled = lock);
     $("admExport").disabled = lock;
-    $("admLog").innerHTML = ov.adminlog.length ? ov.adminlog.map((l) => `<div><b>${esc(l.by)}</b><span>${esc(l.text)}</span><time>${new Date(l.at).toLocaleString()}</time></div>`).join("") : '<div class="mut">No admin activity yet.</div>';
+    $("admLog").innerHTML = ov.adminlog.length ? ov.adminlog.map((l, i) => `<div><b>${esc(l.by)}</b><span>${esc(l.text)}</span>${l.undo ? `<button class="btn sm ghost" data-undo="${i}">Undo</button>` : ""}<time>${new Date(l.at).toLocaleString()}</time></div>`).join("") : '<div class="mut">No admin activity yet.</div>';
+    document.querySelectorAll("[data-undo]").forEach((b) => b.onclick = () => admCall({ action: "undo", index: b.dataset.undo }, () => "Action undone"));
+    $("admTool").innerHTML = opt(below) || "<option value=''>Nobody</option>";
+    $("admMaint").disabled = $("admForum").disabled = lock;
+    $("admMaint").textContent = ov.maint.on ? "Turn off" : "Turn on";
+    $("admMaintState").textContent = lock ? "Locked: developer or owner only." : ov.maint.on ? "ON: only owner and developers can use the panel." : "OFF";
+    window.__maintOn = !!ov.maint.on;
+    window.__pin = ov.pin; paintPin();
+    if (ov.pin) { $("admPinText").value = ov.pin.text; $("admPinLevel").value = ov.pin.level; }
+    loadAdmNotes(); loadAdmExtra();
   } catch (e) { toast(e.message, true); }
 }
+async function loadAdmNotes() {
+  const id = $("admTool").value;
+  if (!id) { $("admNotes").innerHTML = ""; return; }
+  try {
+    const r = await api("/api/users?notes=" + encodeURIComponent(id));
+    $("admNotes").innerHTML = r.notes.map((n, i) => `<div class="adm-note"><span><b>${esc(n.by)}</b> ${esc(n.text)}</span><time>${new Date(n.at).toLocaleDateString()}</time><button class="icon-btn" data-delnote="${i}">×</button></div>`).join("");
+    document.querySelectorAll("[data-delnote]").forEach((b) => b.onclick = () => admCall({ id, action: "delNote", index: b.dataset.delnote }, () => "Note deleted"));
+  } catch (e) {}
+}
+async function loadAdmExtra() {
+  try {
+    const [a, l, bn] = await Promise.all([api("/api/users?activity=1&days=" + $("admActDays").value), api("/api/users?logins=1"), api("/api/users?bans=1")]);
+    const mx = Math.max(1, ...a.series.map((x) => x.n));
+    $("admBars").innerHTML = a.series.map((x) => `<i title="${x.d}: ${x.n}" style="height:${Math.round(x.n / mx * 100)}%"></i>`).join("");
+    $("admRank").innerHTML = a.ranking.map((u) => `<div><b>${esc(u.name)}</b><span>${esc(u.role)}</span><time>${u.count} logs</time></div>`).join("") || '<div class="mut">No staff.</div>';
+    $("admIdle").innerHTML = a.inactive.map((u) => `<div><b>${esc(u.name)}</b><span>${esc(u.role)}</span><time>${u.last ? new Date(u.last).toLocaleDateString() : "never"}</time></div>`).join("") || '<div class="mut">Everyone is active.</div>';
+    $("admLogins").innerHTML = l.logins.map((x) => `<div><b>${esc(x.name)}</b><time>${new Date(x.at).toLocaleString()}</time></div>`).join("") || '<div class="mut">None yet.</div>';
+    $("admBans").innerHTML = bn.bans.map((x) => `<div><b>${esc(x.id)}</b><button class="btn sm ghost" data-unban="${esc(x.id)}" style="margin-left:auto">Unban</button></div>`).join("") || '<div class="mut">No banned IDs.</div>';
+    document.querySelectorAll("[data-unban]").forEach((b) => b.onclick = () => admCall({ action: "unbanId", id: b.dataset.unban }, () => "Unbanned"));
+  } catch (e) {}
+}
+$("admTool").onchange = loadAdmNotes;
+$("admActDays").onchange = loadAdmExtra;
+$("admKick").onclick = async () => { const id = $("admTool").value; if (id && await confirmBox("Force sign-out?", "They will have to sign in again.", "Sign out")) admCall({ id, action: "forceLogout" }, () => "Signed out"); };
+$("admForum").onclick = async () => { const id = $("admTool").value; if (id && await confirmBox("Delete forum messages?", "Every forum message from this member will be deleted.", "Delete")) admCall({ id, action: "purgeForumUser" }, (r) => r.removed + " removed"); };
+$("admNoteAdd").onclick = async () => { const id = $("admTool").value, text = $("admNoteText").value.trim(); if (!id || !text) return; await admCall({ id, action: "addNote", text }, () => "Note added"); $("admNoteText").value = ""; };
+$("admBanBtn").onclick = async () => { const id = $("admBanId").value.trim(); if (id && await confirmBox("Ban this ID?", "Even if they never signed in before.", "Ban")) { await admCall({ action: "banId", id }, () => "Banned"); $("admBanId").value = ""; } };
+$("admPin").onclick = () => admCall({ action: "pin", text: $("admPinText").value, level: $("admPinLevel").value }, () => "Pinned");
+$("admUnpin").onclick = () => { $("admPinText").value = ""; admCall({ action: "unpin" }, () => "Pin removed"); };
+$("admMaint").onclick = async () => { const on = !window.__maintOn; if (await confirmBox(on ? "Turn maintenance on?" : "Turn maintenance off?", on ? "Everyone except owner and developers will be locked out." : "The panel opens again for everyone.", "Confirm")) admCall({ action: "maintenance", on, msg: $("admMaintMsg").value }, () => on ? "Maintenance on" : "Maintenance off"); };
 async function admCall(body, okMsg) {
   try { const r = await api("/api/users", { method: "POST", body }); toast(okMsg(r)); loadAdmin(); } catch (e) { toast(e.message, true); }
 }
-$("admSetRole").onclick = () => { const id = $("admUser").value; if (id) admCall({ id, action: "setRole", role: $("admRole").value }, () => "Role updated"); };
+$("admSetRole").onclick = () => { const id = $("admUser").value; if (id) admCall({ id, action: "setRole", role: $("admRole").value, tempDays: $("admTemp").value }, () => "Role updated"); };
 $("admDelete").onclick = async () => {
   const id = $("admDelUser").value; if (!id) return;
   const n = $("admDelUser").selectedOptions[0].textContent;
