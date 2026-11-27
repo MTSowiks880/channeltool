@@ -4,11 +4,22 @@ const { handle, getUser, isAdmin, clip } = require("../lib/util");
 const RANK = { banned: 0, pending: 0, mod: 1, trainer: 1.5, admin: 2, developer: 3, owner: 4 };
 const rank = (r) => RANK[r] || 0;
 const parse = (rows) => (rows || []).map((r) => { try { return JSON.parse(r); } catch (_) { return null; } }).filter(Boolean);
+const DAY = 864e5;
 
-// Admin audit trail (shown in the Admin section).
-const audit = (redis, me, text) =>
-  redis.lpush("adminlog", JSON.stringify({ by: me.name, uid: me.id, text, at: new Date().toISOString() }))
+// Admin audit trail. `undo` (optional) lets an admin revert the action from the Admin section.
+const audit = (redis, me, text, undo) =>
+  redis.lpush("adminlog", JSON.stringify({ by: me.name, uid: me.id, text, at: new Date().toISOString(), ...(undo ? { undo } : {}) }))
     .then(() => redis.ltrim("adminlog", 0, 199));
+
+const readUsers = async (redis) => {
+  const all = await redis.hgetall("users");
+  const out = Object.values(all).map((r) => JSON.parse(r));
+  out.forEach((u) => {
+    if (u.id === process.env.OWNER_ID) u.role = "owner";
+    else if (u.temp && Date.now() > u.temp.until) u.role = u.temp.back; // shown as ended; saved at next sign-in
+  });
+  return out;
+};
 
 module.exports = handle(async (req, res, redis) => {
   const me = await getUser(redis, req);
@@ -18,22 +29,22 @@ module.exports = handle(async (req, res, redis) => {
 
   if (req.method === "GET") {
     if (q.overview === "1") {
-      const [all, logs, tickets, quizzes, subs, chans, anns, adminlog] = await Promise.all([
-        redis.hgetall("users"), redis.llen("logs"), redis.hgetall("tickets"), redis.hlen("quizzes"),
+      const [users, logs, tickets, quizzes, subs, chans, anns, adminlog, mt, pin] = await Promise.all([
+        readUsers(redis), redis.llen("logs"), redis.hgetall("tickets"), redis.hlen("quizzes"),
         redis.hlen("subs"), redis.llen("forum:channels"), redis.llen("announcements"), redis.lrange("adminlog", 0, 49),
+        redis.get("maint"), redis.get("pin"),
       ]);
       const roles = {};
-      Object.values(all).forEach((r) => {
-        const u = JSON.parse(r);
-        const role = u.id === process.env.OWNER_ID ? "owner" : u.role;
-        roles[role] = (roles[role] || 0) + 1;
-      });
+      users.forEach((u) => { roles[u.role] = (roles[u.role] || 0) + 1; });
       const tk = Object.values(tickets || {}).map((r) => JSON.parse(r));
+      let maint = { on: false, msg: "" }, pinned = null;
+      try { if (mt) maint = JSON.parse(mt); } catch (_) {}
+      try { if (pin) pinned = JSON.parse(pin); } catch (_) {}
       return res.status(200).json({
-        roles, members: Object.keys(all).length, logs,
+        roles, members: users.length, logs,
         tickets: tk.length, ticketsOpen: tk.filter((t) => t.status !== "closed").length,
         quizzes, submissions: subs, channels: chans, announcements: anns,
-        adminlog: parse(adminlog),
+        adminlog: parse(adminlog), maint, pin: pinned,
       });
     }
     if (q.export === "1") {
@@ -48,23 +59,78 @@ module.exports = handle(async (req, res, redis) => {
         quizzes: Object.values(quizzes).map((r) => JSON.parse(r)),
       });
     }
-    const all = await redis.hgetall("users");
-    const users = Object.values(all).map((r) => JSON.parse(r));
-    users.forEach((u) => { if (u.id === process.env.OWNER_ID) u.role = "owner"; });
-    return res.status(200).json({ users });
+    if (q.activity === "1") { // staff ranking, inactive staff, logs per day
+      const days = [7, 30, 90].includes(+q.days) ? +q.days : 7;
+      const [users, rows] = await Promise.all([readUsers(redis), redis.lrange("logs", 0, -1)]);
+      const logs = parse(rows), now = Date.now(), cut = now - days * DAY;
+      const staff = users.filter((u) => ["mod", "trainer", "admin", "developer", "owner"].includes(u.role));
+      const last = {}, count = {}, perDay = {};
+      logs.forEach((l) => {
+        const t = new Date(l.at).getTime(); if (!t) return;
+        if (!last[l.uid] || t > last[l.uid]) last[l.uid] = t;
+        if (t >= cut) count[l.uid] = (count[l.uid] || 0) + 1;
+        if (t >= now - 30 * DAY) { const d = new Date(t).toISOString().slice(0, 10); perDay[d] = (perDay[d] || 0) + 1; }
+      });
+      const series = [];
+      for (let i = 29; i >= 0; i--) { const d = new Date(now - i * DAY).toISOString().slice(0, 10); series.push({ d, n: perDay[d] || 0 }); }
+      return res.status(200).json({
+        days,
+        ranking: staff.map((u) => ({ id: u.id, name: u.name, role: u.role, count: count[u.id] || 0 })).sort((a, b) => b.count - a.count),
+        inactive: staff.filter((u) => !last[u.id] || last[u.id] < cut)
+          .map((u) => ({ id: u.id, name: u.name, role: u.role, last: last[u.id] ? new Date(last[u.id]).toISOString() : null })),
+        series,
+      });
+    }
+    if (q.logins === "1") return res.status(200).json({ logins: parse(await redis.lrange("logins", 0, 49)) });
+    if (q.bans === "1") {
+      const b = await redis.hgetall("idbans");
+      return res.status(200).json({ bans: Object.entries(b).map(([id, r]) => ({ id, ...(JSON.parse(r) || {}) })) });
+    }
+    if (q.notes) {
+      const raw = await redis.hget("notes", String(q.notes));
+      return res.status(200).json({ notes: raw ? JSON.parse(raw) : [] });
+    }
+    return res.status(200).json({ users: await readUsers(redis) });
   }
 
   if (req.method === "POST") {
-    const b = req.body || {};
-    const { id, action } = b;
+    let b = req.body || {};
+    if (typeof b === "string") { try { b = JSON.parse(b); } catch (_) { b = {}; } }
+    const id = b.id;
+    const action = String(b.action || "").trim();
 
     // ---- maintenance tools: developer / owner only ----
-    if (["purgeLogs", "deleteUserLogs", "clearClosedTickets"].includes(action)) {
+    if (["purgeLogs", "deleteUserLogs", "clearClosedTickets", "maintenance", "purgeForumUser"].includes(action)) {
       if (mr < 3) return res.status(403).json({ error: "Only a developer or the owner can do this." });
+      if (action === "maintenance") {
+        const on = !!b.on, msg = clip(b.msg, 200);
+        await redis.set("maint", JSON.stringify({ on, msg, by: me.name, at: new Date().toISOString() }));
+        await audit(redis, me, on ? "Maintenance mode ON" : "Maintenance mode OFF");
+        return res.status(200).json({ ok: true, on });
+      }
+      if (action === "purgeForumUser") {
+        const uid = String(id || "");
+        if (!uid) return res.status(400).json({ error: "Pick a member." });
+        const chans = parse(await redis.lrange("forum:channels", 0, 99));
+        let removed = 0;
+        for (const c of chans) {
+          const key = "forum:channel:" + c.id + ":messages";
+          const rows = await redis.lrange(key, 0, -1);
+          const keep = rows.filter((r) => { try { return JSON.parse(r).uid !== uid; } catch (_) { return true; } });
+          if (keep.length === rows.length) continue;
+          removed += rows.length - keep.length;
+          const m = redis.multi().del(key);
+          if (keep.length) m.rpush(key, ...keep);
+          await m.exec();
+        }
+        await audit(redis, me, `Deleted all forum messages by ${uid} (${removed} removed)`);
+        return res.status(200).json({ ok: true, removed });
+      }
       if (action === "purgeLogs") {
-        const days = Math.max(1, Math.min(3650, parseInt(b.days, 10) || 0));
-        if (!parseInt(b.days, 10)) return res.status(400).json({ error: "Give a number of days." });
-        const cut = Date.now() - days * 864e5;
+        const n = parseInt(b.days, 10);
+        if (!n) return res.status(400).json({ error: "Give a number of days." });
+        const days = Math.max(1, Math.min(3650, n));
+        const cut = Date.now() - days * DAY;
         const rows = await redis.lrange("logs", 0, -1);
         const keep = rows.filter((r) => { try { return new Date(JSON.parse(r).at).getTime() >= cut; } catch (_) { return true; } });
         const m = redis.multi().del("logs");
@@ -91,6 +157,67 @@ module.exports = handle(async (req, res, redis) => {
       return res.status(200).json({ ok: true, removed: dead.length });
     }
 
+    // ---- pinned announcement (any admin) ----
+    if (action === "pin") {
+      const text = clip(b.text, 400);
+      if (!text) return res.status(400).json({ error: "Write the pinned message." });
+      const level = ["info", "warn", "urgent"].includes(b.level) ? b.level : "info";
+      await redis.set("pin", JSON.stringify({ text, level, by: me.name, at: new Date().toISOString() }));
+      await audit(redis, me, `Pinned a ${level} message`);
+      return res.status(200).json({ ok: true });
+    }
+    if (action === "unpin") {
+      await redis.del("pin");
+      await audit(redis, me, "Removed the pinned message");
+      return res.status(200).json({ ok: true });
+    }
+
+    // ---- ban / unban by Discord ID (works before the person ever signs in) ----
+    if (action === "banId" || action === "unbanId") {
+      const uid = String(id || "").trim();
+      if (!/^\d{5,25}$/.test(uid)) return res.status(400).json({ error: "Enter a valid Discord ID (numbers only)." });
+      if (uid === process.env.OWNER_ID) return res.status(403).json({ error: "The owner cannot be banned." });
+      const raw0 = await redis.hget("users", uid);
+      const t0 = raw0 ? JSON.parse(raw0) : null;
+      if (t0 && rank(t0.role) >= mr) return res.status(403).json({ error: "You can only act on members ranked below you." });
+      if (action === "banId") {
+        await redis.hset("idbans", uid, JSON.stringify({ by: me.name, at: new Date().toISOString(), note: clip(b.text, 120) }));
+        if (t0) { t0.role = "banned"; await redis.hset("users", uid, JSON.stringify(t0)); }
+        await audit(redis, me, `Banned ID ${uid}`);
+      } else {
+        await redis.hdel("idbans", uid);
+        await audit(redis, me, `Unbanned ID ${uid}`);
+      }
+      return res.status(200).json({ ok: true });
+    }
+
+    // ---- undo a previous admin action ----
+    if (action === "undo") {
+      const i = parseInt(b.index, 10);
+      const rows = await redis.lrange("adminlog", 0, 199);
+      const e = rows[i] && JSON.parse(rows[i]);
+      if (!e || !e.undo) return res.status(400).json({ error: "This action cannot be undone." });
+      const u = e.undo;
+      if (u.type === "role") {
+        const raw = await redis.hget("users", u.id);
+        if (!raw) return res.status(404).json({ error: "User not found." });
+        const t = JSON.parse(raw);
+        if (t.id === process.env.OWNER_ID || rank(t.role) >= mr || rank(u.role) >= mr) return res.status(403).json({ error: "You can only act on members ranked below you." });
+        if (t.role !== u.now) return res.status(400).json({ error: "This member's role has changed since. Nothing to undo." });
+        t.role = u.role; delete t.temp;
+        await redis.hset("users", t.id, JSON.stringify(t));
+        await audit(redis, me, `Undo: ${t.name} ${u.now} → ${u.role}`);
+      } else if (u.type === "deleteUser") {
+        if (await redis.hget("users", u.user.id)) return res.status(400).json({ error: "This member already exists again." });
+        if (rank(u.user.role) >= mr) return res.status(403).json({ error: "You can only act on members ranked below you." });
+        await redis.hset("users", u.user.id, JSON.stringify(u.user));
+        await audit(redis, me, `Undo: restored member ${u.user.name}`);
+      } else return res.status(400).json({ error: "This action cannot be undone." });
+      delete e.undo; e.text += " (undone)";
+      await redis.lset("adminlog", i + 1, JSON.stringify(e)).catch(() => {});
+      return res.status(200).json({ ok: true });
+    }
+
     // ---- member tools ----
     const raw = await redis.hget("users", String(id));
     if (!raw) return res.status(404).json({ error: "User not found." });
@@ -102,8 +229,27 @@ module.exports = handle(async (req, res, redis) => {
 
     if (action === "deleteUser") {
       await redis.hdel("users", t.id);
-      await audit(redis, me, `Deleted member ${t.name} (${t.id})`);
+      await audit(redis, me, `Deleted member ${t.name} (${t.id})`, { type: "deleteUser", user: t });
       return res.status(200).json({ ok: true });
+    }
+    if (action === "forceLogout") {
+      await redis.hset("kicked", t.id, Date.now());
+      await audit(redis, me, `Forced sign-out of ${t.name}`);
+      return res.status(200).json({ ok: true });
+    }
+    if (action === "addNote") {
+      const text = clip(b.text, 300);
+      if (!text) return res.status(400).json({ error: "Write a note." });
+      const cur = JSON.parse((await redis.hget("notes", t.id)) || "[]");
+      cur.unshift({ by: me.name, text, at: new Date().toISOString() });
+      await redis.hset("notes", t.id, JSON.stringify(cur.slice(0, 30)));
+      return res.status(200).json({ ok: true, notes: cur.slice(0, 30) });
+    }
+    if (action === "delNote") {
+      const cur = JSON.parse((await redis.hget("notes", t.id)) || "[]");
+      cur.splice(parseInt(b.index, 10), 1);
+      await redis.hset("notes", t.id, JSON.stringify(cur));
+      return res.status(200).json({ ok: true, notes: cur });
     }
 
     const roles = {
@@ -118,10 +264,10 @@ module.exports = handle(async (req, res, redis) => {
     };
     let next = roles[action];
     if (action === "setRole") {
-      next = clip(b.role, 20);
+      next = clip(b.role, 20).toLowerCase();
       if (!(next in RANK) || next === "owner") return res.status(400).json({ error: "Unknown role." });
     }
-    if (!next) return res.status(400).json({ error: "Unknown action." });
+    if (!next) return res.status(400).json({ error: `Unknown action "${action}". Redeploy the latest api/users.js.` });
     if (rank(next) >= mr) {
       return res.status(403).json({
         error: next === "developer" ? "Only the owner can make developers." : "Only a developer or the owner can make admins."
@@ -138,8 +284,16 @@ module.exports = handle(async (req, res, redis) => {
 
     const prev = t.role;
     t.role = next;
+    delete t.temp;
+    // Temporary role: after `tempDays` days the member goes back to the role they had (or mod).
+    const td = parseInt(b.tempDays, 10);
+    let tempTxt = "";
+    if (action === "setRole" && td > 0 && next !== "banned") {
+      t.temp = { until: Date.now() + Math.min(td, 365) * DAY, back: ["pending", "banned"].includes(prev) ? "mod" : prev };
+      tempTxt = ` for ${Math.min(td, 365)} days (then ${t.temp.back})`;
+    }
     await redis.hset("users", t.id, JSON.stringify(t));
-    await audit(redis, me, `${t.name}: ${prev} → ${next}`);
+    await audit(redis, me, `${t.name}: ${prev} → ${next}${tempTxt}`, { type: "role", id: t.id, role: prev, now: next });
     return res.status(200).json({ ok: true });
   }
   res.status(405).json({ error: "Method not allowed." });

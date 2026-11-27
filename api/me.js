@@ -7,12 +7,22 @@ const pub = (u) => ({
 });
 
 module.exports = handle(async (req, res, redis) => {
-  const me = await getUser(redis, req);
+  const me = await getUser(redis, req, true);
   if (!me) return res.status(401).json({ error: "Not signed in." });
+
+  const mt = await redis.get("maint");
+  if (mt && !["owner", "developer"].includes(me.role)) {
+    let m = {}; try { m = JSON.parse(mt); } catch (_) {}
+    if (m.on) return res.status(503).json({ maintenance: true, error: m.msg || "Maintenance in progress. Come back soon." });
+  }
 
   if (req.method === "GET") {
     const id = String((req.query || {}).id || "");
-    if (!id) return res.status(200).json({ user: me });
+    if (!id) {
+      let pin = null;
+      if (!["pending", "banned"].includes(me.role)) { try { pin = JSON.parse((await redis.get("pin")) || "null"); } catch (_) {} }
+      return res.status(200).json({ user: me, pin });
+    }
     const raw = await redis.hget("users", id);
     if (!raw) return res.status(404).json({ error: "This member has no profile yet." });
     const logs = (await redis.lrange("logs", 0, -1)).map((r) => JSON.parse(r)).filter((l) => l.uid === id);

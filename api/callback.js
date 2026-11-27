@@ -29,6 +29,7 @@ module.exports = handle(async (req, res, redis) => {
   const ext = (h) => (h.startsWith("a_") ? "gif" : "png");
   const old = await redis.hget("users", d.id);
   const prev = old ? JSON.parse(old) : null;
+  const idBanned = d.id !== process.env.OWNER_ID && !!(await redis.hget("idbans", d.id));
   const u = {
     ...(prev || {}),
     id: d.id,
@@ -39,11 +40,13 @@ module.exports = handle(async (req, res, redis) => {
       : `https://cdn.discordapp.com/embed/avatars/${Number((BigInt(d.id) >> 22n) % 6n)}.png`,
     banner: d.banner ? `https://cdn.discordapp.com/banners/${d.id}/${d.banner}.${ext(d.banner)}?size=600` : null,
     color: d.accent_color != null ? "#" + d.accent_color.toString(16).padStart(6, "0") : null,
-    role: prev ? prev.role : d.id === process.env.OWNER_ID ? "owner" : "pending",
+    role: idBanned ? "banned" : prev ? prev.role : d.id === process.env.OWNER_ID ? "owner" : "pending",
     seen: new Date().toISOString(),
     joined: (prev && prev.joined) || new Date().toISOString(),
   };
   await redis.hset("users", d.id, JSON.stringify(u));
+  await redis.lpush("logins", JSON.stringify({ id: d.id, name: u.name, at: u.seen }));
+  await redis.ltrim("logins", 0, 199);
   res.setHeader("Set-Cookie", [cookie(makeSession(d.id), 2592000), "st=; Path=/; Max-Age=0"]);
   res.statusCode = 302;
   res.setHeader("Location", "/");
