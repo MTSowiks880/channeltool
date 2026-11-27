@@ -97,6 +97,14 @@ main{padding:28px 36px 80px;max-width:1100px;width:100%}
   border-radius:99px;padding:2px 8px;border:1px solid}
 .role::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 .role.owner{color:#fbbf24;border-color:rgba(251,191,36,.3);background:rgba(251,191,36,.08)}
+.adm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.adm-card{max-width:none}.adm-card h3{margin:0 0 14px}
+.adm-row{display:flex;gap:8px;align-items:center}.adm-row input,.adm-row select{flex:1;min-width:0}
+.adm-lock{font-size:12.5px;margin:0 0 12px}
+.adm-log{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow:auto}
+.adm-log div{display:flex;gap:10px;font-size:13px;padding:8px 10px;background:var(--bg2);border:1px solid var(--line);border-radius:9px}
+.adm-log time{margin-left:auto;color:var(--mut);white-space:nowrap}
+.role.trainer{color:#2dd4bf;border-color:rgba(45,212,191,.3);background:rgba(45,212,191,.08)}
 .role.developer{color:#f472b6;border-color:rgba(244,114,182,.35);background:rgba(244,114,182,.08)}
 .role.admin{color:var(--acc2);border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.08)}
 .role.mod{color:var(--mute);border-color:rgba(76,194,255,.3);background:rgba(76,194,255,.08)}
@@ -953,6 +961,7 @@ html[data-theme="light"]{--bg:#f4f6fb;--panel:#fff;--panel2:#edf0f7;--text:#2025
     <button class="nav" data-view="announcements"><svg><use href="#i-megaphone"/></svg>Annonces</button>
     <button class="nav adminOnly hide" data-view="review"><svg><use href="#i-check"/></svg>Review<span class="count revCount hide"></span></button>
     <button class="nav adminOnly hide" data-view="members"><svg><use href="#i-users"/></svg>Members<span class="count pendCount hide"></span></button>
+    <button class="nav adminOnly hide" data-view="admin"><svg><use href="#i-shield"/></svg>Admin</button>
     <button class="nav" data-view="settings"><svg><use href="#i-sliders"/></svg>Settings</button>
     <div class="side-sp"></div>
     <div class="me" id="meCard" title="My profile">
@@ -1097,7 +1106,7 @@ html[data-theme="light"]{--bg:#f4f6fb;--panel:#fff;--panel2:#edf0f7;--text:#2025
     <section id="v-quizzes" class="hide">
       <div class="top">
         <div><h2>Quizzes</h2><p class="mut">Answer the questions, an admin reviews your answers.</p></div>
-        <button class="btn adminOnly hide" id="newQuizBtn"><svg><use href="#i-plus"/></svg>New quiz</button>
+        <button class="btn quizOnly hide" id="newQuizBtn"><svg><use href="#i-plus"/></svg>New quiz</button>
       </div>
       <div class="members" id="quizList"></div>
     </section>
@@ -1152,6 +1161,31 @@ html[data-theme="light"]{--bg:#f4f6fb;--panel:#fff;--panel2:#edf0f7;--text:#2025
       <div class="top"><div><h2>Members</h2><p class="mut">Approve new accounts and manage roles.</p></div></div>
       <div class="tabs" id="mtabs"></div>
       <div class="members" id="users"></div>
+    </section>
+
+    <!-- Admin section (admins only) -->
+    <section id="v-admin" class="hide">
+      <div class="top"><div><h2>Admin</h2><p class="mut">Tools reserved for admins. Destructive tools need the developer rank or higher.</p></div></div>
+      <div class="stats" id="admStats"></div>
+      <div class="adm-grid">
+        <div class="card adm-card"><h3>Set a member's role</h3>
+          <div class="field"><label>Member</label><select id="admUser"></select></div>
+          <div class="field"><label>New role</label><select id="admRole"></select></div>
+          <button class="btn" id="admSetRole">Apply role</button>
+        </div>
+        <div class="card adm-card"><h3>Maintenance</h3>
+          <p class="mut adm-lock" id="admLock"></p>
+          <div class="field"><label>Delete logs older than (days)</label><div class="adm-row"><input id="admDays" type="number" min="1" value="90"><button class="btn danger" data-adm="purgeLogs">Purge</button></div></div>
+          <div class="field"><label>Delete all logs written by</label><div class="adm-row"><select id="admLogUser"></select><button class="btn danger" data-adm="deleteUserLogs">Delete</button></div></div>
+          <div class="adm-row" style="flex-wrap:wrap"><button class="btn ghost" data-adm="clearClosedTickets">Clear closed tickets</button><button class="btn ghost" id="admExport">Export data (JSON)</button></div>
+        </div>
+        <div class="card adm-card"><h3>Delete a member</h3>
+          <p class="mut">Removes the profile. They come back as pending if they sign in again.</p>
+          <div class="field"><select id="admDelUser"></select></div>
+          <button class="btn danger" id="admDelete">Delete member</button>
+        </div>
+      </div>
+      <div class="card adm-card" style="margin-top:18px;max-width:none"><h3>Admin activity</h3><div id="admLog" class="adm-log"></div></div>
     </section>
 
     <!-- Staff leaderboard -->
@@ -1210,6 +1244,7 @@ html[data-theme="light"]{--bg:#f4f6fb;--panel:#fff;--panel2:#edf0f7;--text:#2025
     <button class="nav" data-view="announcements"><svg><use href="#i-megaphone"/></svg>Annonces</button>
     <button class="nav adminOnly hide" data-view="review"><svg><use href="#i-check"/></svg>Review<span class="count revCount hide"></span></button>
     <button class="nav adminOnly hide" data-view="members"><svg><use href="#i-users"/></svg>Members<span class="count pendCount hide"></span></button>
+    <button class="nav adminOnly hide" data-view="admin"><svg><use href="#i-shield"/></svg>Admin</button>
     <button class="nav" data-view="settings"><svg><use href="#i-sliders"/></svg>Settings</button>
     <a class="nav" href="/api/logout"><svg><use href="#i-out"/></svg>Sign out</a>
   </nav>
@@ -1228,7 +1263,7 @@ const ACTIONS = {
 };
 const act = (a) => ACTIONS[a] || ACTIONS.Other;
 const ico = (n) => `<svg><use href="#i-${n}"/></svg>`;
-let me = null, admin = false, allLogs = [], allUsers = [], filter = "All", userTab = "all", pickedAction = "Warn", images = [];
+let me = null, admin = false, quizMgr = false, allLogs = [], allUsers = [], filter = "All", userTab = "all", pickedAction = "Warn", images = [];
 let leaderboardPeriod = "30";
 
 async function api(path, opts = {}) {
@@ -1275,7 +1310,7 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.q
 function go(view) {
   if (view !== "take" && typeof stopTimer === "function" && qTick) stopTimer();
   if (view !== "take" && typeof stopWatch === "function" && watch) stopWatch(false);
-  ["logs", "warns", "analytics", "leaderboard", "staff", "appeals", "new", "members", "quizzes", "take", "builder", "review", "forums", "announcements", "settings"].forEach((v) => { const el = $("v-" + v); if (el) el.classList.toggle("hide", v !== view); });
+  ["logs", "warns", "analytics", "leaderboard", "staff", "appeals", "new", "members", "quizzes", "take", "builder", "review", "forums", "announcements", "settings", "admin"].forEach((v) => { const el = $("v-" + v); if (el) el.classList.toggle("hide", v !== view); });
   const navView = ["take", "builder"].includes(view) ? "quizzes" : view;
   document.querySelectorAll(".nav[data-view]").forEach((n) => n.classList.toggle("on", n.dataset.view === navView));
   if (view === "quizzes") loadQuizzes();
@@ -1286,6 +1321,7 @@ function go(view) {
   if (view === "settings") renderAppearanceSettings();
   if (view === "analytics") loadAnalytics();
   if (view === "members") loadUsers();
+  if (view === "admin" && admin) loadAdmin();
   if (view === "forums") loadForums();
   if (view === "announcements") loadAnnouncements();
   if (view === "settings") renderSettings();
@@ -1412,7 +1448,7 @@ function renderSettings() {
   const sw = (k) => '<label class="sw"><input type="checkbox" data-s="' + k + '"' + (S[k] ? " checked" : "") + "><span></span></label>";
   const seg = (k, opts) => '<div class="seg" data-seg="' + k + '">' + opts.map((o) => '<button type="button" data-v="' + o[0] + '" class="' + (String(S[k]) === String(o[0]) ? "on" : "") + '">' + o[1] + "</button>").join("") + "</div>";
   const views = [["logs", "Logs"], ["warns", "Warns"], ["analytics", "Analytics"], ["new", "New log"], ["quizzes", "Quizzes"], ["forums", "Forums"], ["announcements", "Annonces"]];
-  if (admin) views.push(["review", "Review"], ["members", "Members"]);
+  if (admin) views.push(["review", "Review"], ["members", "Members"], ["admin", "Admin"]);
   const swatches = ACCENTS.map((c) => '<button type="button" class="swatch' + (S.accent.toLowerCase() === c ? " on" : "") + '" style="--c:' + c + '" data-swatch="' + c + '" title="' + c + '"></button>').join("");
   $("settingsBody").innerHTML =
     '<div class="set-sec"><h3><svg class="ic"><use href="#i-sound"/></svg>Sounds</h3><div class="sd">Every click gets a little sound, generated by your browser.</div>' +
@@ -1499,7 +1535,7 @@ function renderSettings() {
 
 /* staff forums */
 let forumChannels = [], forumActiveId = null, forumImages = [];
-const forumCanManage = () => !!me && ["mod", "admin", "developer", "owner"].includes(me.role);
+const forumCanManage = () => !!me && ["mod", "trainer", "admin", "developer", "owner"].includes(me.role);
 
 async function loadForums() {
   $("forumChannels").innerHTML = '<div class="forum-empty">Loading channels…</div>';
@@ -1837,14 +1873,16 @@ async function init() {
   $("meRole").className = "role " + me.role;
   paintMeCard();
   admin = ["owner", "developer", "admin"].includes(me.role);
-  const canMentionEveryone = ["owner", "developer", "admin", "mod"].includes(me.role);
+  quizMgr = admin || me.role === "trainer";
+  document.querySelectorAll(".quizOnly").forEach((x) => x.classList.toggle("hide", !quizMgr));
+  const canMentionEveryone = ["owner", "developer", "admin", "trainer", "mod"].includes(me.role);
   document.querySelectorAll(".staff-mention").forEach((x) => x.classList.toggle("hide", !canMentionEveryone));
   document.querySelectorAll(".adminOnly").forEach((x) => x.classList.toggle("hide", !admin));
   buildChips(); buildActs();
   show("app");
   loadLogs();
   if (admin) { loadUsers(true); loadSubs(true); }
-  if (S.startView && S.startView !== "logs" && (admin || !["review", "members"].includes(S.startView))) go(S.startView);
+  if (S.startView && S.startView !== "logs" && (admin || !["review", "members", "admin"].includes(S.startView))) go(S.startView);
 }
 
 /* logs */
@@ -2259,20 +2297,22 @@ async function loadUsers(silent) {
 }
 function renderUsers() {
   const tabs = [["all", "All"], ["pending", "Pending"], ["team", "Team"], ["banned", "Removed"]];
-  const cnt = (t) => allUsers.filter((u) => t === "all" || (t === "team" ? ["mod", "admin", "developer", "owner"].includes(u.role) : u.role === t)).length;
+  const cnt = (t) => allUsers.filter((u) => t === "all" || (t === "team" ? ["mod", "trainer", "admin", "developer", "owner"].includes(u.role) : u.role === t)).length;
   $("mtabs").innerHTML = tabs.map(([k, n]) => `<button class="tab ${k === userTab ? "on" : ""}" data-t="${k}">${n} <span class="dim">${cnt(k)}</span></button>`).join("");
   $("mtabs").querySelectorAll(".tab").forEach((b) => b.onclick = () => { userTab = b.dataset.t; renderUsers(); });
-  const order = { pending: 0, owner: 1, developer: 2, admin: 3, mod: 4, banned: 5 };
+  const order = { pending: 0, owner: 1, developer: 2, admin: 3, trainer: 4, mod: 5, banned: 6 };
   const list = allUsers
-    .filter((u) => userTab === "all" || (userTab === "team" ? ["mod", "admin", "developer", "owner"].includes(u.role) : u.role === userTab))
+    .filter((u) => userTab === "all" || (userTab === "team" ? ["mod", "trainer", "admin", "developer", "owner"].includes(u.role) : u.role === userTab))
     .sort((a, b) => (order[a.role] ?? 9) - (order[b.role] ?? 9));
   if (!list.length) { $("users").innerHTML = `<div class="empty" style="grid-column:1/-1">${ico("users")}<div>Nobody here.</div></div>`; return; }
   $("users").innerHTML = list.map((u, i) => {
     const btns = [];
-    const RK = { banned: 0, pending: 0, mod: 1, admin: 2, developer: 3, owner: 4 };
+    const RK = { banned: 0, pending: 0, mod: 1, trainer: 1.5, admin: 2, developer: 3, owner: 4 };
     const mr = RK[me.role] || 0, tr = RK[u.role] || 0;
     if (u.role !== "owner" && tr < mr) {
       if (u.role === "pending" || u.role === "banned") btns.push(["approve", "Approve", "ok"]);
+      if (mr >= 2 && tr < 1.5) btns.push(["makeTrainer", "Make trainer", "ghost"]);
+      if (mr >= 2 && u.role === "trainer") btns.push(["removeTrainer", "Remove trainer", "ghost"]);
       if (mr >= 3 && tr < 2) btns.push(["promote", "Make admin", "ghost"]);
       if (mr >= 3 && u.role === "admin") btns.push(["demote", "Remove admin", "ghost"]);
       if (mr >= 4 && tr < 3) btns.push(["makeDeveloper", "Make developer", "ghost"]);
@@ -2298,10 +2338,62 @@ $("users").addEventListener("click", async (e) => {
   if (a === "kick" && !(await confirmBox("Remove " + n + "?", "They will lose access to the panel.", "Remove"))) return;
   try {
     await api("/api/users", { method: "POST", body: { id: u, action: a } });
-    toast({ approve: "Approved " + n, kick: "Removed " + n, promote: n + " is now admin", demote: n + " is no longer admin", makeDeveloper: n + " is now developer", removeDeveloper: n + " is no longer developer" }[a]);
+    toast({ approve: "Approved " + n, kick: "Removed " + n, promote: n + " is now admin", demote: n + " is no longer admin", makeTrainer: n + " is now trainer", removeTrainer: n + " is no longer trainer", makeDeveloper: n + " is now developer", removeDeveloper: n + " is no longer developer" }[a]);
     loadUsers();
   } catch (err) { toast(err.message, true); }
 });
+
+/* admin section */
+const RK = { banned: 0, pending: 0, mod: 1, trainer: 1.5, admin: 2, developer: 3, owner: 4 };
+async function loadAdmin() {
+  const mr = RK[me.role] || 0;
+  try {
+    const [ov, us] = await Promise.all([api("/api/users?overview=1"), api("/api/users")]);
+    allUsers = us.users;
+    const r = ov.roles || {};
+    $("admStats").innerHTML = [["Members", ov.members, "var(--acc)"], ["Staff", (r.mod || 0) + (r.trainer || 0) + (r.admin || 0) + (r.developer || 0) + (r.owner || 0), "var(--mute)"], ["Pending", r.pending || 0, "var(--warn)"], ["Logs", ov.logs, "var(--kick)"], ["Open tickets", ov.ticketsOpen + " / " + ov.tickets, "var(--unban)"], ["Quizzes", ov.quizzes, "var(--acc)"], ["Forum channels", ov.channels, "var(--mute)"], ["Announcements", ov.announcements, "var(--warn)"]]
+      .map(([k, v, c]) => `<div class="stat" style="--c:${c}"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join("");
+    const opt = (list) => list.map((u) => `<option value="${esc(u.id)}">${esc(u.name)} (${esc(u.role)})</option>`).join("");
+    const below = allUsers.filter((u) => u.role !== "owner" && (RK[u.role] || 0) < mr);
+    $("admUser").innerHTML = opt(below) || "<option value=''>Nobody</option>";
+    $("admDelUser").innerHTML = opt(below) || "<option value=''>Nobody</option>";
+    $("admLogUser").innerHTML = opt(allUsers) || "<option value=''>Nobody</option>";
+    const roles = ["pending", "mod", "trainer", "admin", "developer", "banned"].filter((x) => (RK[x] || 0) < mr || x === "pending" || x === "banned");
+    $("admRole").innerHTML = roles.map((x) => `<option value="${x}">${x}</option>`).join("");
+    const lock = mr < 3;
+    $("admLock").textContent = lock ? "Locked: only a developer or the owner can use these maintenance tools." : "These actions cannot be undone.";
+    document.querySelectorAll("[data-adm]").forEach((b) => b.disabled = lock);
+    $("admExport").disabled = lock;
+    $("admLog").innerHTML = ov.adminlog.length ? ov.adminlog.map((l) => `<div><b>${esc(l.by)}</b><span>${esc(l.text)}</span><time>${new Date(l.at).toLocaleString()}</time></div>`).join("") : '<div class="mut">No admin activity yet.</div>';
+  } catch (e) { toast(e.message, true); }
+}
+async function admCall(body, okMsg) {
+  try { const r = await api("/api/users", { method: "POST", body }); toast(okMsg(r)); loadAdmin(); } catch (e) { toast(e.message, true); }
+}
+$("admSetRole").onclick = () => { const id = $("admUser").value; if (id) admCall({ id, action: "setRole", role: $("admRole").value }, () => "Role updated"); };
+$("admDelete").onclick = async () => {
+  const id = $("admDelUser").value; if (!id) return;
+  const n = $("admDelUser").selectedOptions[0].textContent;
+  if (await confirmBox("Delete " + n + "?", "Their profile will be removed.", "Delete")) admCall({ id, action: "deleteUser" }, () => "Member deleted");
+};
+document.querySelectorAll("[data-adm]").forEach((b) => b.onclick = async () => {
+  const a = b.dataset.adm;
+  const body = { action: a };
+  let t = "This cannot be undone.";
+  if (a === "purgeLogs") { body.days = $("admDays").value; t = "Delete logs older than " + body.days + " days?"; }
+  if (a === "deleteUserLogs") { body.id = $("admLogUser").value; if (!body.id) return; t = "Delete every log written by this member?"; }
+  if (a === "clearClosedTickets") t = "Delete all closed tickets?";
+  if (await confirmBox("Are you sure?", t, "Confirm")) admCall(body, (r) => r.removed + " removed");
+});
+$("admExport").onclick = async () => {
+  try {
+    const d = await api("/api/users?export=1");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(d, null, 2)], { type: "application/json" }));
+    a.download = "panel-export-" + new Date().toISOString().slice(0, 10) + ".json";
+    a.click(); URL.revokeObjectURL(a.href);
+  } catch (e) { toast(e.message, true); }
+};
 
 /* quizzes */
 let allQuizzes = [], allSubs = [], bq = null, taking = null, revTab = "pending";
@@ -2324,20 +2416,20 @@ async function loadQuizzes() {
 }
 function renderQuizzes() {
   if (!allQuizzes.length) {
-    $("quizList").innerHTML = `<div class="empty" style="grid-column:1/-1">${ico("quiz")}<div>${admin ? "No quiz yet — create the first one." : "No quiz available yet."}</div></div>`;
+    $("quizList").innerHTML = `<div class="empty" style="grid-column:1/-1">${ico("quiz")}<div>${quizMgr ? "No quiz yet — create the first one." : "No quiz available yet."}</div></div>`;
     return;
   }
   $("quizList").innerHTML = allQuizzes.map((q, i) => {
     const s = mySub(q.id);
     let btn;
-    if ((!s || s.status === "failed") && !q.live && !admin) btn = `<button class="btn sm ghost" disabled>${ico("timer")}Waiting for an admin to start</button>`;
+    if ((!s || s.status === "failed") && !q.live && !quizMgr) btn = `<button class="btn sm ghost" disabled>${ico("timer")}Waiting for an admin to start</button>`;
     else if (!s || s.status === "failed") btn = `<button class="btn sm" data-take="${esc(q.id)}">${s ? "Retake" : "Start"}</button>`;
     else if (s.status === "pending") btn = `<button class="btn sm ghost" disabled>Awaiting review</button>`;
     else btn = `<button class="btn sm ok" disabled>Completed</button>`;
-    const gate = admin ? (q.live
+    const gate = quizMgr ? (q.live
       ? `<button class="btn sm danger" data-stop="${esc(q.id)}" data-n="${esc(q.title)}">Stop</button>`
       : `<button class="btn sm ok" data-start="${esc(q.id)}" data-n="${esc(q.title)}">${ico("check")}Start for everyone</button>`) : "";
-    const adm = admin ? gate + `<button class="btn sm ghost" data-edit="${esc(q.id)}">Edit</button><button class="btn sm danger" data-delq="${esc(q.id)}" data-n="${esc(q.title)}">Delete</button>` : "";
+    const adm = quizMgr ? gate + `<button class="btn sm ghost" data-edit="${esc(q.id)}">Edit</button><button class="btn sm danger" data-delq="${esc(q.id)}" data-n="${esc(q.title)}">Delete</button>` : "";
     const res = s ? `<div class="row">${statBadge(s.status)}${s.pct != null ? `<span class="mut">${s.pct}% on multiple choice</span>` : ""}</div>${s.feedback ? `<div class="fb">“${esc(s.feedback)}”</div>` : ""}` : "";
     return `<div class="qz" style="animation-delay:${Math.min(i, 10) * 30}ms">
       <h3>${esc(q.title)}</h3>
@@ -2381,7 +2473,7 @@ setInterval(async () => {
 function startTake(id) {
   taking = allQuizzes.find((q) => q.id === id);
   if (!taking) return;
-  if (!taking.live && !admin) { toast("An admin has not started this quiz yet.", true); taking = null; return; }
+  if (!taking.live && !quizMgr) { toast("An admin has not started this quiz yet.", true); taking = null; return; }
   $("takeTitle").textContent = taking.title;
   $("takeDesc").textContent = taking.description || "";
   $("takeErr").textContent = "";
