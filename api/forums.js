@@ -18,6 +18,19 @@ const parseRows = (rows) => {
   return result;
 };
 
+// Restricted channels (leaker / decompiler). Limited roles ONLY see channels that list their role.
+const LIMITED = ["leaker", "decompiler"], FULL = ["owner", "admin", "developer"];
+const SEED = [
+  ["decompile-done", "Decompilers post finished decompiles here (images).", ["decompiler", "leaker"]],
+  ["leaker-chat", "Chat for leakers and decompilers.", ["leaker", "decompiler"]],
+  ["leaker-logs", "Leaker logs.", ["leaker", "decompiler"]],
+];
+const canSee = (u, ch) => {
+  const r = Array.isArray(ch.roles) ? ch.roles : [];
+  if (LIMITED.includes(u.role)) return r.includes(u.role);
+  return !r.length || FULL.includes(u.role) || r.includes(u.role);
+};
+
 module.exports = handle(async (req, res, redis) => {
   const user = await getUser(redis, req);
   if (!user || ["pending", "banned"].includes(user.role)) {
@@ -83,8 +96,13 @@ module.exports = handle(async (req, res, redis) => {
 
   // Forum channels
   if (req.method === "GET" && !query.channelId) {
+    if (await redis.setnx("forum:seed:leakers", "1")) {
+      for (const [name, description, roles] of SEED) {
+        await redis.lpush("forum:channels", JSON.stringify({ id: "l-" + name, name, description, roles, createdBy: "system", createdByName: "System", at: new Date().toISOString() }));
+      }
+    }
     const rows = await redis.lrange("forum:channels", 0, 99);
-    const channels = parseRows(rows);
+    const channels = parseRows(rows).filter((c) => canSee(user, c));
     for (const channel of channels) {
       channel.messageCount = await redis.llen("forum:channel:" + channel.id + ":messages");
     }
@@ -95,7 +113,7 @@ module.exports = handle(async (req, res, redis) => {
     const channelId = clip(query.channelId, 48);
     const channel = parseRows(await redis.lrange("forum:channels", 0, 99))
       .find((item) => item.id === channelId);
-    if (!channel) return res.status(404).json({ error: "Channel not found." });
+    if (!channel || !canSee(user, channel)) return res.status(404).json({ error: "Channel not found." });
     const rows = await redis.lrange("forum:channel:" + channelId + ":messages", 0, 499);
     return res.status(200).json({ messages: parseRows(rows) });
   }
@@ -115,7 +133,8 @@ module.exports = handle(async (req, res, redis) => {
         description,
         createdBy: user.id,
         createdByName: user.name,
-        at: new Date().toISOString()
+        at: new Date().toISOString(),
+        roles: isAdmin(user) && Array.isArray(body.roles) ? body.roles.filter((r) => LIMITED.includes(r)) : []
       };
       await redis.lpush("forum:channels", JSON.stringify(channel));
       await redis.ltrim("forum:channels", 0, 99);
@@ -127,7 +146,7 @@ module.exports = handle(async (req, res, redis) => {
       if (!channelId) return res.status(400).json({ error: "Channel id is required." });
 
       const channels = parseRows(await redis.lrange("forum:channels", 0, 99));
-      if (!channels.some((item) => item.id === channelId)) {
+      if (!channels.some((item) => item.id === channelId && canSee(user, item))) {
         return res.status(404).json({ error: "Channel not found." });
       }
 
@@ -179,6 +198,8 @@ module.exports = handle(async (req, res, redis) => {
       return res.status(400).json({ error: "Channel id and message id are required." });
     }
 
+    const chs = parseRows(await redis.lrange("forum:channels", 0, 99));
+    if (!chs.some((c) => c.id === channelId && canSee(user, c))) return res.status(404).json({ error: "Channel not found." });
     const key = "forum:channel:" + channelId + ":messages";
     const rows = await redis.lrange(key, 0, 499);
     const hit = rows.find((row) => {

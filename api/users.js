@@ -1,7 +1,7 @@
 const { handle, getUser, isAdmin, clip, notify } = require("../lib/util");
 
 // owner > developer > admin > trainer > mod > (pending / banned)
-const RANK = { banned: 0, pending: 0, mod: 1, trainer: 1.5, admin: 2, developer: 3, owner: 4 };
+const RANK = { banned: 0, pending: 0, leaker: 0.5, decompiler: 0.5, mod: 1, trainer: 1.5, admin: 2, developer: 3, owner: 4 };
 const rank = (r) => RANK[r] || 0;
 const parse = (rows) => (rows || []).map((r) => { try { return JSON.parse(r); } catch (_) { return null; } }).filter(Boolean);
 const DAY = 864e5;
@@ -371,7 +371,11 @@ module.exports = handle(async (req, res, redis) => {
       makeDeveloper: "developer",
       removeDeveloper: "admin",
       makeTrainer: "trainer",
-      removeTrainer: "mod"
+      removeTrainer: "mod",
+      makeLeaker: "leaker",
+      makeDecompiler: "decompiler",
+      removeLeaker: "pending",
+      removeDecompiler: "pending"
     };
     let next = roles[action];
     if (action === "timeout") { next = "banned"; if (!(parseInt(b.tempDays, 10) > 0)) return res.status(400).json({ error: "Give a number of days." }); }
