@@ -81,6 +81,25 @@ module.exports = handle(async (req, res, redis) => {
         series,
       });
     }
+    if (q.health === "1") {
+      const t0 = Date.now(); await redis.ping(); const ping = Date.now() - t0;
+      const [logs, users, keys] = await Promise.all([redis.llen("logs"), redis.hlen("users"), redis.dbsize()]);
+      const env = (k) => !!process.env[k];
+      return res.status(200).json({ ping, logs, users, keys, env: { REDIS_URL: env("REDIS_URL"), SESSION_SECRET: env("SESSION_SECRET"), OWNER_ID: env("OWNER_ID"), SITE_URL: env("SITE_URL") }, node: process.version, at: new Date().toISOString() });
+    }
+    if (q.report === "1") { // copy-paste weekly report
+      const days = [7, 30].includes(+q.days) ? +q.days : 7, cut = Date.now() - days * DAY;
+      const [users, rows] = await Promise.all([readUsers(redis), redis.lrange("logs", 0, -1)]);
+      const logs = parse(rows).filter((l) => new Date(l.at).getTime() >= cut);
+      const act = {}, by = {};
+      logs.forEach((l) => { act[l.action] = (act[l.action] || 0) + 1; by[l.mod] = (by[l.mod] || 0) + 1; });
+      const top = Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 5);
+      const fresh = users.filter((u) => new Date(u.joined).getTime() >= cut).length;
+      const text = [`📊 Mod report (last ${days} days)`, `• ${logs.length} logs, ${fresh} new members, ${users.filter((u) => u.role === "pending").length} pending`,
+        "• " + (Object.entries(act).map(([k, v]) => `${k} ${v}`).join(" · ") || "no actions"),
+        ...top.map(([n, c], i) => `${["🥇", "🥈", "🥉", "4.", "5."][i]} ${n} — ${c}`)].join("\n");
+      return res.status(200).json({ text });
+    }
     if (q.logins === "1") return res.status(200).json({ logins: parse(await redis.lrange("logins", 0, 49)) });
     if (q.bans === "1") {
       const b = await redis.hgetall("idbans");
@@ -155,6 +174,29 @@ module.exports = handle(async (req, res, redis) => {
       if (dead.length) await redis.hdel("tickets", ...dead);
       await audit(redis, me, `Cleared ${dead.length} closed tickets`);
       return res.status(200).json({ ok: true, removed: dead.length });
+    }
+
+    // ---- bulk tools ----
+    if (action === "approveAll") {
+      const pend = (await readUsers(redis)).filter((u) => u.role === "pending");
+      for (const u of pend) { u.role = "mod"; await redis.hset("users", u.id, JSON.stringify(u)); }
+      await audit(redis, me, `Approved all pending members (${pend.length})`);
+      return res.status(200).json({ ok: true, count: pend.length });
+    }
+    if (action === "forceLogoutAll" || action === "purgePending") {
+      if (mr < 3) return res.status(403).json({ error: "Only a developer or the owner can do this." });
+      if (action === "forceLogoutAll") {
+        const list = (await readUsers(redis)).filter((u) => u.id !== me.id && u.id !== process.env.OWNER_ID && rank(u.role) < mr);
+        for (const u of list) await redis.hset("kicked", u.id, Date.now());
+        await audit(redis, me, `Forced sign-out of everyone below ${me.role} (${list.length})`);
+        return res.status(200).json({ ok: true, count: list.length });
+      }
+      const n = Math.max(1, Math.min(365, parseInt(b.days, 10) || 0));
+      if (!parseInt(b.days, 10)) return res.status(400).json({ error: "Give a number of days." });
+      const old = (await readUsers(redis)).filter((u) => u.role === "pending" && u.joined && Date.now() - new Date(u.joined).getTime() > n * DAY);
+      for (const u of old) await redis.hdel("users", u.id);
+      await audit(redis, me, `Removed ${old.length} pending accounts older than ${n} days`);
+      return res.status(200).json({ ok: true, count: old.length });
     }
 
     // ---- pinned announcement (any admin) ----
@@ -263,6 +305,7 @@ module.exports = handle(async (req, res, redis) => {
       removeTrainer: "mod"
     };
     let next = roles[action];
+    if (action === "timeout") { next = "banned"; if (!(parseInt(b.tempDays, 10) > 0)) return res.status(400).json({ error: "Give a number of days." }); }
     if (action === "setRole") {
       next = clip(b.role, 20).toLowerCase();
       if (!(next in RANK) || next === "owner") return res.status(400).json({ error: "Unknown role." });
@@ -288,7 +331,7 @@ module.exports = handle(async (req, res, redis) => {
     // Temporary role: after `tempDays` days the member goes back to the role they had (or mod).
     const td = parseInt(b.tempDays, 10);
     let tempTxt = "";
-    if (action === "setRole" && td > 0 && next !== "banned") {
+    if ((action === "setRole" || action === "timeout") && td > 0) {
       t.temp = { until: Date.now() + Math.min(td, 365) * DAY, back: ["pending", "banned"].includes(prev) ? "mod" : prev };
       tempTxt = ` for ${Math.min(td, 365)} days (then ${t.temp.back})`;
     }
