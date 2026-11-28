@@ -1050,6 +1050,9 @@ html[data-theme="light"] aside{background:rgba(247,246,252,.98)}
 #flash.on{transform:none}#flash div{margin-top:14px;max-width:min(92vw,760px);padding:14px 26px;border-radius:12px;background:rgba(14,16,22,.96);border:2px solid var(--acc);box-shadow:0 10px 40px rgba(0,0,0,.5);text-align:center;font-weight:700;font-size:18px}
 #flash small{display:block;font-size:11px;letter-spacing:.15em;opacity:.7;margin-bottom:4px}#flash.warn div{border-color:var(--warn)}#flash.urgent div{border-color:var(--ban);color:#ff8f8f}
 #xpchip{position:fixed;right:14px;bottom:14px;z-index:9999;padding:8px 14px;border-radius:99px;background:rgba(14,16,22,.95);border:2px solid var(--warn);font-weight:700;font-size:13px;box-shadow:0 6px 24px rgba(0,0,0,.4)}
+#kbg{position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.55);display:flex;justify-content:center;align-items:flex-start;padding-top:12vh}
+#kbox{width:min(560px,92vw);background:#12151c;border:1px solid rgba(255,255,255,.12);border-radius:14px;overflow:hidden}#kbox input{width:100%;border:0;border-bottom:1px solid rgba(255,255,255,.1);border-radius:0;padding:14px 16px;font-size:16px;background:transparent}
+#klist{max-height:320px;overflow:auto}#klist div{padding:10px 16px;cursor:pointer;display:flex;justify-content:space-between;gap:10px}#klist div.on{background:rgba(255,255,255,.08)}#klist small{opacity:.5}
 </style>
 </head>
 <body>
@@ -1399,6 +1402,23 @@ html[data-theme="light"] aside{background:rgba(247,246,252,.98)}
           <p class="mut" id="xeState">No event running.</p>
           <div class="adm-row"><select id="xeMult"><option value="2">x2</option><option value="3">x3</option><option value="4">x4</option></select><input id="xeMins" type="number" min="1" max="1440" value="60" title="Minutes"><button class="btn" id="xeGo">Start</button><button class="btn ghost" id="xeOff">Stop</button></div>
         </div>
+        <div class="card adm-card"><h3>Safety switches</h3>
+          <p class="mut" id="swState"></p>
+          <div class="adm-row" style="flex-wrap:wrap"><button class="btn danger" id="swLock">Close sign-ups</button><button class="btn danger" id="swRo">Read-only</button></div>
+        </div>
+        <div class="card adm-card"><h3>Weekly quest</h3>
+          <p class="mut" id="qState">No quest running.</p>
+          <div class="adm-row" style="flex-wrap:wrap"><input id="qGoal" type="number" min="1" value="20" title="Logs needed"><input id="qDays" type="number" min="1" max="60" value="7" title="Days"><input id="qBonus" type="number" min="1" value="100" title="Bonus XP"><button class="btn" id="qGo">Start</button><button class="btn ghost" id="qOff">Stop</button></div>
+          <p class="mut">Logs needed · days · bonus XP</p>
+        </div>
+        <div class="card adm-card"><h3>Member XP &amp; leave</h3>
+          <div class="field"><select id="xgUser"></select></div>
+          <div class="adm-row" style="flex-wrap:wrap"><input id="xgN" type="number" value="50" title="XP (negative removes)"><button class="btn" id="xgGive">Give XP</button><button class="btn ghost" id="xgReset">Reset</button></div>
+          <div class="adm-row" style="margin-top:8px"><button class="btn ghost" id="xgLeave">On leave</button><button class="btn ghost" id="xgBack">Back</button></div>
+        </div>
+        <div class="card adm-card"><h3>Exports</h3>
+          <div class="adm-row" style="flex-wrap:wrap"><button class="btn ghost" id="exLogs">All logs (CSV)</button><button class="btn ghost" id="exAdm">Admin log (CSV)</button></div>
+        </div>
         <div class="card adm-card"><h3>Report &amp; health</h3>
           <div class="adm-row" style="flex-wrap:wrap"><button class="btn ghost" id="rpWeek">Weekly report</button><button class="btn ghost" id="rpHealth">System health</button></div>
           <pre class="cons" id="rpOut" style="height:auto;max-height:200px;margin-top:10px;display:none"></pre>
@@ -1409,7 +1429,7 @@ html[data-theme="light"] aside{background:rgba(247,246,252,.98)}
         <div class="mut" style="margin-top:10px">Logs per day (30 days)</div><div class="adm-bars" id="admBars"></div>
         <div class="adm-grid"><div><b>Ranking</b><div id="admRank" class="adm-log"></div></div><div><b>Inactive staff</b><div id="admIdle" class="adm-log"></div></div><div><b>Recent sign-ins</b><div id="admLogins" class="adm-log"></div></div></div>
       </div>
-      <div class="card adm-card" style="margin-top:18px;max-width:none"><h3>Admin activity</h3><div id="admLog" class="adm-log"></div></div>
+      <div class="card adm-card" style="margin-top:18px;max-width:none"><h3>Admin activity</h3><input id="admFilter" placeholder="Filter (name, action…)" style="margin-bottom:8px"><div id="admLog" class="adm-log"></div></div>
     </section>
 
     <!-- Staff leaderboard -->
@@ -1963,7 +1983,7 @@ function pfDate(t) { return t ? new Date(t).toLocaleDateString(undefined, { day:
 function xpBlock(x) {
   const pct = Math.max(0, Math.min(100, Math.round((x.xp - x.from) / Math.max(1, x.to - x.from) * 100))), mx = Math.max(1, ...x.spark);
   return `<div class="xp"><div class="xp-h"><b>Lv ${x.level} · ${esc(x.title)}</b><span>${x.xp} XP${x.rank ? " · #" + x.rank + "/" + x.of : ""}</span></div>
-    <div class="xp-bar"><i style="width:${pct}%"></i></div>
+    <div class="xp-bar"><i style="width:${pct}%"></i></div>${x.quest ? `<div class="xp-meta">🎯 Quest: ${Math.min(x.quest.done, x.quest.goal)}/${x.quest.goal} logs · +${x.quest.bonus} XP</div>` : ""}
     <div class="xp-meta"><span>${x.to - x.xp} XP to Lv ${x.level + 1}</span><span>🔥 ${x.streak}d streak (best ${x.best})</span><span>${x.week} logs this week</span></div>
     <div class="xp-spark" title="Logs, last 7 days">${x.spark.map((n) => `<i style="height:${Math.round(n / mx * 100)}%"></i>`).join("")}</div>
     <div class="xp-badges">${x.badges.map((b) => `<span class="${b.on ? "" : "off"}" title="${esc(b.desc)}">${b.icon} ${esc(b.name)}</span>`).join("")}</div></div>`;
@@ -2609,7 +2629,13 @@ async function loadAdmin() {
     $("admLock").textContent = lock ? "Locked: only a developer or the owner can use these maintenance tools." : "These actions cannot be undone.";
     document.querySelectorAll("[data-adm]").forEach((b) => b.disabled = lock);
     $("admExport").disabled = lock;
-    $("admLog").innerHTML = ov.adminlog.length ? ov.adminlog.map((l, i) => `<div><b>${esc(l.by)}</b><span>${esc(l.text)}</span>${l.undo ? `<button class="btn sm ghost" data-undo="${i}">Undo</button>` : ""}<time>${new Date(l.at).toLocaleString()}</time></div>`).join("") : '<div class="mut">No admin activity yet.</div>';
+    window.__adminlog = ov.adminlog; window.__ov = ov;
+    $("swLock").textContent = ov.lock ? "Open sign-ups" : "Close sign-ups"; $("swRo").textContent = ov.readonly ? "Resume logging" : "Read-only";
+    $("swState").textContent = "Sign-ups: " + (ov.lock ? "CLOSED" : "open") + " · Logging: " + (ov.readonly ? "PAUSED" : "on");
+    $("qState").textContent = ov.quest ? ov.quest.goal + " logs for +" + ov.quest.bonus + " XP, until " + new Date(ov.quest.until).toLocaleDateString() : "No quest running.";
+    $("xgUser").innerHTML = opt(below) || "<option value=''>Nobody</option>";
+    const af = ($("admFilter").value || "").toLowerCase();
+    $("admLog").innerHTML = ov.adminlog.length ? ov.adminlog.map((l, i) => af && !(l.by + " " + l.text).toLowerCase().includes(af) ? "" : `<div><b>${esc(l.by)}</b><span>${esc(l.text)}</span>${l.undo ? `<button class="btn sm ghost" data-undo="${i}">Undo</button>` : ""}<time>${new Date(l.at).toLocaleString()}</time></div>`).join("") : '<div class="mut">No admin activity yet.</div>';
     document.querySelectorAll("[data-undo]").forEach((b) => b.onclick = () => admCall({ action: "undo", index: b.dataset.undo }, () => "Action undone"));
     $("toUser").innerHTML = opt(below.filter((u) => u.role !== "banned")) || "<option value=''>Nobody</option>";
     $("admTool").innerHTML = opt(below) || "<option value=''>Nobody</option>";
@@ -2681,6 +2707,53 @@ $("admExport").onclick = async () => {
 };
 
 
+
+/* more admin tools */
+const sw = (b, okMsg) => api("/api/users", { method: "POST", body: b }).then((r) => { toast(okMsg(r)); loadAdmin(); }).catch((e) => toast(e.message, true));
+$("swLock").onclick = () => sw({ action: "lockSignups", on: !(window.__ov || {}).lock }, (r) => r.on ? "Sign-ups closed" : "Sign-ups open");
+$("swRo").onclick = () => sw({ action: "readOnly", on: !(window.__ov || {}).readonly }, (r) => r.on ? "Logging paused" : "Logging resumed");
+$("qGo").onclick = () => sw({ action: "quest", goal: $("qGoal").value, days: $("qDays").value, bonus: $("qBonus").value }, () => "Quest started");
+$("qOff").onclick = () => sw({ action: "quest", goal: 0 }, () => "Quest stopped");
+$("xgGive").onclick = () => { const id = $("xgUser").value; if (id) sw({ id, action: "giveXp", amount: $("xgN").value }, (r) => "XP total adjustment: " + r.total); };
+$("xgReset").onclick = () => { const id = $("xgUser").value; if (id) sw({ id, action: "resetXp" }, () => "XP adjustments reset"); };
+$("xgLeave").onclick = () => { const id = $("xgUser").value; if (id) sw({ id, action: "setLeave", on: true }, () => "Marked on leave"); };
+$("xgBack").onclick = () => { const id = $("xgUser").value; if (id) sw({ id, action: "setLeave", on: false }, () => "Back from leave"); };
+let afT; $("admFilter").oninput = () => { clearTimeout(afT); afT = setTimeout(loadAdmin, 350); };
+function dlCsv(name, text) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: "text/csv" })); a.download = name + "-" + new Date().toISOString().slice(0, 10) + ".csv"; a.click(); URL.revokeObjectURL(a.href); }
+$("exLogs").onclick = async () => { try { dlCsv("logs", (await api("/api/users?csv=1")).csv); } catch (e) { toast(e.message, true); } };
+$("exAdm").onclick = () => { const q = (v) => '"' + String(v).replace(/"/g, '""') + '"'; dlCsv("admin-log", "date,admin,action\n" + (window.__adminlog || []).map((l) => [l.at, l.by, l.text].map(q).join(",")).join("\n")); };
+
+/* Ctrl+K command palette */
+(function () {
+  const PAGES = [["logs", "Logs"], ["warns", "Warns"], ["analytics", "Analytics"], ["new", "New log"], ["forums", "Forums"], ["announcements", "Announcements"], ["quizzes", "Quizzes"], ["leaderboard", "Leaderboard"], ["staff", "Staff activity"], ["appeals", "Appeals"], ["settings", "Settings"], ["members", "Members", 1], ["admin", "Admin", 1], ["review", "Review", 1]];
+  let bg = null, sel = 0, items = [];
+  const close = () => { if (bg) bg.remove(); bg = null; };
+  function build(q) {
+    q = q.toLowerCase().trim(); items = [];
+    PAGES.filter((p) => !p[2] || admin).forEach((p) => { if (!q || p[1].toLowerCase().includes(q)) items.push([p[1], "page", () => go(p[0])]); });
+    if (q.length > 1) {
+      (allUsers || []).filter((u) => (u.name + " " + u.username).toLowerCase().includes(q)).slice(0, 6).forEach((u) => items.push([u.name, "member · " + u.role, () => showProfileCard({ id: u.id, name: u.name, avatar: u.avatar, role: u.role })]));
+      [...new Set((allLogs || []).map((l) => l.target))].filter((t) => String(t).toLowerCase().includes(q)).slice(0, 5).forEach((t) => items.push([t, "target · search logs", () => { go("logs"); const f = $("q"); if (f) { f.value = t; f.dispatchEvent(new Event("input", { bubbles: true })); } }]));
+    }
+    sel = 0; paint();
+  }
+  function paint() { bg.querySelector("#klist").innerHTML = items.map((it, i) => `<div class="${i === sel ? "on" : ""}" data-i="${i}"><span>${esc(it[0])}</span><small>${esc(it[1])}</small></div>`).join("") || '<div><small>No result</small></div>'; }
+  function open() {
+    if (bg || !me) return; bg = document.createElement("div"); bg.id = "kbg";
+    bg.innerHTML = '<div id="kbox"><input id="kin" placeholder="Jump to a page, member or target…" autocomplete="off"><div id="klist"></div></div>'; document.body.appendChild(bg);
+    const inp = bg.querySelector("#kin"); inp.focus(); build("");
+    inp.oninput = () => build(inp.value);
+    bg.onmousedown = (e) => { if (e.target === bg) close(); const r = e.target.closest("[data-i]"); if (r) { const it = items[+r.dataset.i]; close(); it[2](); } };
+    inp.onkeydown = (e) => {
+      if (e.key === "Escape") close();
+      else if (e.key === "ArrowDown") { sel = Math.min(items.length - 1, sel + 1); paint(); e.preventDefault(); }
+      else if (e.key === "ArrowUp") { sel = Math.max(0, sel - 1); paint(); e.preventDefault(); }
+      else if (e.key === "Enter" && items[sel]) { const it = items[sel]; close(); it[2](); }
+    };
+  }
+  document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); bg ? close() : open(); } });
+})();
+
 /* XP events */
 let xpEv = null;
 function paintXpEvent(ev) {
@@ -2720,7 +2793,7 @@ const cons = $("consIn"), cOut = $("cons"), cHist = []; let cPos = 0;
 const cPrint = (t, k) => { const d = document.createElement("div"); if (k) d.className = k; d.textContent = t; cOut.appendChild(d); cOut.scrollTop = cOut.scrollHeight; };
 const cFind = (q) => { q = String(q || "").replace(/^@/, "").toLowerCase(); return allUsers.find((u) => u.id === q || (u.username || "").toLowerCase() === q) || allUsers.find((u) => (u.name || "").toLowerCase() === q) || allUsers.find((u) => (u.name || "").toLowerCase().includes(q) || (u.username || "").toLowerCase().includes(q)); };
 const CMDS = {
-  help: "Commands:\n/stats  /whois <user>  /xp <user>  /top\n/role <user> <role> [days]  /timeout <user> <days>  /approve <user>  /approveall\n/kick <user>  /logout <user>  /logoutall  /note <user> <text>\n/ban <id> [reason]  /unban <id>  /xpevent <2|3|4|off> [min]  /flash <text>  /pin <text>  /unpin  /maint on|off [msg]\n/purge <days>  /purgepending <days>  /report  /health  /clear\n<user> = name, @username or Discord ID.",
+  help: "Commands:\n/stats  /whois <user>  /xp <user>  /top\n/role <user> <role> [days]  /timeout <user> <days>  /approve <user>  /approveall\n/kick <user>  /logout <user>  /logoutall  /note <user> <text>\n/ban <id> [7d] [reason]  /unban <id>  /xpevent <2|3|4|off> [min]  /quest <goal> <days> <bonus>|off\n/lock on|off  /readonly on|off  /givexp <user> <n>  /leave <user> [off]  /suggest  /csv  /flash <text>  /pin <text>  /unpin  /maint on|off [msg]\n/purge <days>  /purgepending <days>  /report  /health  /clear\n<user> = name, @username or Discord ID.",
 };
 async function cRun(line) {
   const [c0, ...a] = line.trim().replace(/^\//, "").split(/\s+/); const c = (c0 || "").toLowerCase(), rest = a.join(" ");
@@ -2740,7 +2813,13 @@ async function cRun(line) {
   if (c === "approveall" || c === "logoutall") { const r = await post({ action: c === "approveall" ? "approveAll" : "forceLogoutAll" }); return cPrint(r.count + " affected", "c"); }
   if (c === "purgepending") { const r = await post({ action: "purgePending", days: a[0] }); return cPrint(r.count + " removed", "c"); }
   if (c === "purge") { const r = await post({ action: "purgeLogs", days: a[0] }); return cPrint(r.removed + " logs removed", "c"); }
-  if (c === "ban" || c === "unban") { await post({ action: c + "Id", id: a[0], text: a.slice(1).join(" ") }); return cPrint(c + " " + a[0], "c"); }
+  if (c === "ban" || c === "unban") { const dm = /^(\d+)d$/.exec(a[1] || ""); await post({ action: c + "Id", id: a[0], days: dm ? dm[1] : 0, text: a.slice(dm ? 2 : 1).join(" ") }); return cPrint(c + " " + a[0], "c"); }
+  if (c === "lock" || c === "readonly") { await post({ action: c === "lock" ? "lockSignups" : "readOnly", on: a[0] === "on" }); return cPrint(c + " " + (a[0] === "on" ? "ON" : "OFF"), "c"); }
+  if (c === "quest") { await post({ action: "quest", goal: a[0] === "off" ? 0 : a[0], days: a[1], bonus: a[2] }); return cPrint(a[0] === "off" ? "Quest stopped" : "Quest started", "c"); }
+  if (c === "givexp") { const u = U(a[0]); const r = await post({ id: u.id, action: "giveXp", amount: a[1] }); return cPrint(u.name + ": adjustment total " + r.total, "c"); }
+  if (c === "leave") { const u = U(a[0]); await post({ id: u.id, action: "setLeave", on: a[1] !== "off" }); return cPrint(u.name + (a[1] === "off" ? " is back" : " is on leave"), "c"); }
+  if (c === "suggest") { const rows = (await api("/api/me?id=all")).rows.filter((r) => r.level >= 10 && (allUsers.find((u) => u.id === r.id) || {}).role === "mod"); return cPrint(rows.map((r) => `${r.name} (Lv ${r.level}) could become trainer`).join("\n") || "Nobody is ready yet (needs Lv 10 and mod role)."); }
+  if (c === "csv") { dlCsv("logs", (await api("/api/users?csv=1")).csv); return cPrint("CSV downloaded", "c"); }
   if (c === "xpevent") { const m = a[0] === "off" ? 1 : +a[0]; await post({ action: "xpEvent", mult: m, mins: a[1] || 60 }); return cPrint(m > 1 ? "x" + m + " XP event started" : "XP event stopped", "c"); }
   if (c === "flash" || c === "abuse") { await post({ action: "flash", text: rest, secs: 6 }); return cPrint("Flash sent", "c"); }
   if (c === "pin") { await post({ action: "pin", text: rest }); return cPrint("Pinned", "c"); }
