@@ -29,7 +29,12 @@ module.exports = handle(async (req, res, redis) => {
   const ext = (h) => (h.startsWith("a_") ? "gif" : "png");
   const old = await redis.hget("users", d.id);
   const prev = old ? JSON.parse(old) : null;
-  const idBanned = d.id !== process.env.OWNER_ID && !!(await redis.hget("idbans", d.id));
+  let idBanned = false;
+  if (d.id !== process.env.OWNER_ID) {
+    const bn = await redis.hget("idbans", d.id);
+    if (bn) { let x = {}; try { x = JSON.parse(bn) || {}; } catch (_) {} if (x.until && x.until < Date.now()) await redis.hdel("idbans", d.id); else idBanned = true; }
+    if (!prev && !idBanned && (await redis.get("lock"))) return res.status(403).json({ error: "Sign-ups are closed right now. Ask a staff member." });
+  }
   const u = {
     ...(prev || {}),
     id: d.id,

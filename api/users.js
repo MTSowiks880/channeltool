@@ -1,4 +1,4 @@
-const { handle, getUser, isAdmin, clip } = require("../lib/util");
+const { handle, getUser, isAdmin, clip, notify } = require("../lib/util");
 
 // owner > developer > admin > trainer > mod > (pending / banned)
 const RANK = { banned: 0, pending: 0, mod: 1, trainer: 1.5, admin: 2, developer: 3, owner: 4 };
@@ -8,8 +8,8 @@ const DAY = 864e5;
 
 // Admin audit trail. `undo` (optional) lets an admin revert the action from the Admin section.
 const audit = (redis, me, text, undo) =>
-  redis.lpush("adminlog", JSON.stringify({ by: me.name, uid: me.id, text, at: new Date().toISOString(), ...(undo ? { undo } : {}) }))
-    .then(() => redis.ltrim("adminlog", 0, 199));
+  (notify(`🛡️ **${me.name}**: ${text}`), redis.lpush("adminlog", JSON.stringify({ by: me.name, uid: me.id, text, at: new Date().toISOString(), ...(undo ? { undo } : {}) }))
+    .then(() => redis.ltrim("adminlog", 0, 199)));
 
 const readUsers = async (redis) => {
   const all = await redis.hgetall("users");
@@ -38,13 +38,15 @@ module.exports = handle(async (req, res, redis) => {
       users.forEach((u) => { roles[u.role] = (roles[u.role] || 0) + 1; });
       const tk = Object.values(tickets || {}).map((r) => JSON.parse(r));
       let maint = { on: false, msg: "" }, pinned = null;
+      const [lk, ro, qs] = await Promise.all([redis.get("lock"), redis.get("readonly"), redis.get("quest")]);
+      let quest = null; try { quest = JSON.parse(qs || "null"); if (quest && quest.until < Date.now()) quest = null; } catch (_) {}
       try { if (mt) maint = JSON.parse(mt); } catch (_) {}
       try { if (pin) pinned = JSON.parse(pin); } catch (_) {}
       return res.status(200).json({
         roles, members: users.length, logs,
         tickets: tk.length, ticketsOpen: tk.filter((t) => t.status !== "closed").length,
         quizzes, submissions: subs, channels: chans, announcements: anns,
-        adminlog: parse(adminlog), maint, pin: pinned,
+        adminlog: parse(adminlog), maint, pin: pinned, lock: !!lk, readonly: !!ro, quest,
       });
     }
     if (q.export === "1") {
@@ -76,10 +78,14 @@ module.exports = handle(async (req, res, redis) => {
       return res.status(200).json({
         days,
         ranking: staff.map((u) => ({ id: u.id, name: u.name, role: u.role, count: count[u.id] || 0 })).sort((a, b) => b.count - a.count),
-        inactive: staff.filter((u) => !last[u.id] || last[u.id] < cut)
+        inactive: staff.filter((u) => !u.leave).filter((u) => !last[u.id] || last[u.id] < cut)
           .map((u) => ({ id: u.id, name: u.name, role: u.role, last: last[u.id] ? new Date(last[u.id]).toISOString() : null })),
         series,
       });
+    }
+    if (q.csv === "1") {
+      const rows = parse(await redis.lrange("logs", 0, -1)), esc = (v) => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
+      return res.status(200).json({ csv: ["id,date,mod,target,action,note,xp_multiplier", ...rows.map((l) => [l.id, l.at, l.mod, l.target, l.action, l.note, l.xm || 1].map(esc).join(","))].join("\n") });
     }
     if (q.health === "1") {
       const t0 = Date.now(); await redis.ping(); const ping = Date.now() - t0;
@@ -199,6 +205,23 @@ module.exports = handle(async (req, res, redis) => {
       return res.status(200).json({ ok: true, count: old.length });
     }
 
+    // ---- switches, quests ----
+    if (action === "lockSignups" || action === "readOnly") {
+      const key = action === "lockSignups" ? "lock" : "readonly", on = !!b.on;
+      if (on) await redis.set(key, "1"); else await redis.del(key);
+      await audit(redis, me, `${action === "lockSignups" ? "Sign-ups" : "Read-only mode"} ${on ? (action === "lockSignups" ? "CLOSED" : "ON") : (action === "lockSignups" ? "open" : "off")}`);
+      return res.status(200).json({ ok: true, on });
+    }
+    if (action === "quest") {
+      const goal = parseInt(b.goal, 10), bonus = parseInt(b.bonus, 10), days = Math.max(1, Math.min(60, parseInt(b.days, 10) || 7));
+      if (!goal || goal < 1) { await redis.del("quest"); await audit(redis, me, "Quest stopped"); return res.status(200).json({ ok: true, off: true }); }
+      const q = { goal, bonus: Math.max(1, Math.min(5000, bonus || 100)), from: Date.now(), until: Date.now() + days * DAY, by: me.name };
+      await redis.set("quest", JSON.stringify(q), "EX", days * 86400 + 86400);
+      await redis.set("flash", JSON.stringify({ id: Date.now().toString(36), text: `🎯 QUEST: write ${goal} logs in ${days} days for +${q.bonus} XP!`, secs: 8, style: "info", by: me.name, at: Date.now() }), "EX", 120);
+      await audit(redis, me, `Quest: ${goal} logs in ${days}d for +${q.bonus} XP`);
+      return res.status(200).json({ ok: true });
+    }
+
     // ---- XP events: x2 / x3 / x4 for every log written while active ----
     if (action === "xpEvent") {
       const mult = parseInt(b.mult, 10), mins = Math.max(1, Math.min(1440, parseInt(b.mins, 10) || 60));
@@ -250,7 +273,7 @@ module.exports = handle(async (req, res, redis) => {
       const t0 = raw0 ? JSON.parse(raw0) : null;
       if (t0 && rank(t0.role) >= mr) return res.status(403).json({ error: "You can only act on members ranked below you." });
       if (action === "banId") {
-        await redis.hset("idbans", uid, JSON.stringify({ by: me.name, at: new Date().toISOString(), note: clip(b.text, 120) }));
+        await redis.hset("idbans", uid, JSON.stringify({ by: me.name, at: new Date().toISOString(), note: clip(b.text, 120), ...(parseInt(b.days, 10) > 0 ? { until: Date.now() + Math.min(parseInt(b.days, 10), 365) * DAY } : {}) }));
         if (t0) { t0.role = "banned"; await redis.hset("users", uid, JSON.stringify(t0)); }
         await audit(redis, me, `Banned ID ${uid}`);
       } else {
@@ -319,6 +342,25 @@ module.exports = handle(async (req, res, redis) => {
       cur.splice(parseInt(b.index, 10), 1);
       await redis.hset("notes", t.id, JSON.stringify(cur));
       return res.status(200).json({ ok: true, notes: cur });
+    }
+
+    if (action === "giveXp") {
+      const n = Math.max(-5000, Math.min(5000, parseInt(b.amount, 10) || 0)); if (!n) return res.status(400).json({ error: "Give a number (e.g. 50 or -50)." });
+      const tot = await redis.hincrby("xpadj", t.id, n);
+      await audit(redis, me, `${n > 0 ? "+" : ""}${n} XP for ${t.name} (adjustment total ${tot})`);
+      global.__xpc = null;
+      return res.status(200).json({ ok: true, total: tot });
+    }
+    if (action === "resetXp") {
+      await redis.hdel("xpadj", t.id); global.__xpc = null;
+      await audit(redis, me, `XP adjustments reset for ${t.name}`);
+      return res.status(200).json({ ok: true });
+    }
+    if (action === "setLeave") {
+      if (b.on) t.leave = true; else delete t.leave;
+      await redis.hset("users", t.id, JSON.stringify(t));
+      await audit(redis, me, `${t.name} is ${b.on ? "on leave" : "back from leave"}`);
+      return res.status(200).json({ ok: true });
     }
 
     const roles = {
