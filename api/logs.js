@@ -16,6 +16,8 @@ module.exports = handle(async (req, res, redis) => {
     const images = (Array.isArray(b.images) ? b.images : [])
       .filter((i) => typeof i === "string" && i.startsWith("data:image/") && i.length < 600000)
       .slice(0, 4);
+    let xm = 1;
+    try { const ev = JSON.parse((await redis.get("xpevent")) || "null"); if (ev && ev.until > Date.now()) xm = ev.mult; } catch (_) {}
     const log = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       uid: u.id, mod: u.name, avatar: u.avatar, target,
@@ -23,6 +25,7 @@ module.exports = handle(async (req, res, redis) => {
       note: clip(b.note, 2000),
       images,
       at: new Date().toISOString(),
+      ...(xm > 1 ? { xm } : {}),
     };
     await redis.lpush("logs", JSON.stringify(log));
     return res.status(201).json(log);

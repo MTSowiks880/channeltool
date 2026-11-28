@@ -13,11 +13,13 @@ const TITLES = [[20, "Legend"], [15, "Warden"], [10, "Enforcer"], [7, "Sentinel"
 const need = (L) => 50 * L * (L - 1);
 const dayOf = (t) => Math.floor(t / 864e5);
 function calc(list, joined) {
-  let xp = 0, ev = 0, det = 0, week = 0; const act = {}, days = new Set(), spark = [0, 0, 0, 0, 0, 0, 0], today = dayOf(Date.now());
+  let xp = 0, ev = 0, det = 0, week = 0, boosted = 0; const act = {}, days = new Set(), spark = [0, 0, 0, 0, 0, 0, 0], today = dayOf(Date.now());
   list.forEach((l) => {
-    const a = W[l.action] ? l.action : "Other"; act[a] = (act[a] || 0) + 1; xp += W[a];
-    if (l.images && l.images.length) { xp += 5; ev++; }
-    if ((l.note || "").length >= 40) { xp += 5; det++; }
+    const a = W[l.action] ? l.action : "Other"; act[a] = (act[a] || 0) + 1; let g = W[a];
+    if (l.images && l.images.length) { g += 5; ev++; }
+    if ((l.note || "").length >= 40) { g += 5; det++; }
+    xp += g * (l.xm || 1); // x2 / x3 / x4 XP events
+    if (l.xm > 1) boosted++;
     const t = new Date(l.at).getTime(); if (!t) return;
     days.add(dayOf(t));
     const ago = today - dayOf(t); if (ago >= 0 && ago < 7) { spark[6 - ago]++; week++; }
@@ -34,6 +36,7 @@ function calc(list, joined) {
     ["evidence", "📸", "Evidence pro", "25 logs with screenshots", ev >= 25], ["detail", "🧾", "Thorough", "25 logs with a detailed note", det >= 25],
     ["all", "🧰", "All-rounder", "Used 5 different actions", Object.keys(act).length >= 5], ["s7", "🔥", "On fire", "7-day streak", best >= 7],
     ["s30", "🌋", "Unstoppable", "30-day streak", best >= 30], ["vet", "🛡️", "Veteran", "Member for 90+ days", !!old],
+    ["boost", "⚡", "Event grinder", "10 logs during XP events", boosted >= 10],
   ].map(([id, icon, name, desc, on]) => ({ id, icon, name, desc, on }));
   return { xp, level, title: (TITLES.find((t) => level >= t[0]) || TITLES[6])[1], from: need(level), to: need(level + 1), streak: cur, best, week, spark, actions: act, badges };
 }
@@ -64,7 +67,12 @@ module.exports = handle(async (req, res, redis) => {
     if (!id) {
       let pin = null;
       if (!["pending", "banned"].includes(me.role)) { try { pin = JSON.parse((await redis.get("pin")) || "null"); } catch (_) {} }
-      return res.status(200).json({ user: me, pin });
+      let flash = null;
+      if (!["pending", "banned"].includes(me.role)) { try { flash = JSON.parse((await redis.get("flash")) || "null"); } catch (_) {} }
+      if (flash && Date.now() - flash.at > (flash.secs + 20) * 1000) flash = null;
+      let xpEvent = null;
+      try { xpEvent = JSON.parse((await redis.get("xpevent")) || "null"); if (xpEvent && xpEvent.until < Date.now()) xpEvent = null; } catch (_) {}
+      return res.status(200).json({ user: me, pin, flash, xpEvent });
     }
     if (id === "all") return res.status(200).json({ rows: (await ranking(redis)).rows.map(({ badges, spark, ...r }) => r) });
     const raw = await redis.hget("users", id);
