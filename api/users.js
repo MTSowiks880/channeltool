@@ -199,6 +199,33 @@ module.exports = handle(async (req, res, redis) => {
       return res.status(200).json({ ok: true, count: old.length });
     }
 
+    // ---- XP events: x2 / x3 / x4 for every log written while active ----
+    if (action === "xpEvent") {
+      const mult = parseInt(b.mult, 10), mins = Math.max(1, Math.min(1440, parseInt(b.mins, 10) || 60));
+      if (!mult || mult <= 1) {
+        await redis.del("xpevent");
+        await audit(redis, me, "XP event stopped");
+        return res.status(200).json({ ok: true, off: true });
+      }
+      if (![2, 3, 4].includes(mult)) return res.status(400).json({ error: "Multiplier must be 2, 3 or 4." });
+      const until = Date.now() + mins * 60000;
+      await redis.set("xpevent", JSON.stringify({ mult, until, by: me.name }), "EX", mins * 60);
+      await redis.set("flash", JSON.stringify({ id: Date.now().toString(36), text: `⚡ x${mult} XP EVENT for ${mins} min. Every log counts!`, secs: 8, style: "warn", by: me.name, at: Date.now() }), "EX", 120);
+      await audit(redis, me, `XP event x${mult} for ${mins} min`);
+      return res.status(200).json({ ok: true, until });
+    }
+
+    // ---- flash announcement: shown for a few seconds on everyone's screen ----
+    if (action === "flash") {
+      const text = clip(b.text, 160);
+      if (!text) return res.status(400).json({ error: "Write the message." });
+      const secs = Math.max(3, Math.min(20, parseInt(b.secs, 10) || 6));
+      const style = ["info", "warn", "urgent"].includes(b.style) ? b.style : "info";
+      await redis.set("flash", JSON.stringify({ id: Date.now().toString(36), text, secs, style, by: me.name, at: Date.now() }), "EX", 120);
+      await audit(redis, me, `Flash message (${secs}s): ${text.slice(0, 60)}`);
+      return res.status(200).json({ ok: true });
+    }
+
     // ---- pinned announcement (any admin) ----
     if (action === "pin") {
       const text = clip(b.text, 400);
