@@ -223,6 +223,57 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
 .toast.bad{border-left-color:var(--ban)}
 
 
+
+/* admin extras: bulk tools, timeout, report, health, command console */
+$("bkApprove").onclick = async () => { if (await confirmBox("Approve everyone pending?", "They all become mods.", "Approve all", false)) admCall({ action: "approveAll" }, (r) => r.count + " approved"); };
+$("bkLogout").onclick = async () => { if (await confirmBox("Sign out everyone?", "Every member ranked below you must sign in again.", "Sign out")) admCall({ action: "forceLogoutAll" }, (r) => r.count + " signed out"); };
+$("bkPurge").onclick = async () => { const d = $("bkDays").value; if (await confirmBox("Remove old pending accounts?", "Pending for more than " + d + " days.", "Remove")) admCall({ action: "purgePending", days: d }, (r) => r.count + " removed"); };
+$("toGo").onclick = async () => { const id = $("toUser").value; if (id && await confirmBox("Timeout this member?", "They are locked out for " + $("toDays").value + " days.", "Timeout")) admCall({ id, action: "timeout", tempDays: $("toDays").value }, () => "Timed out"); };
+const rpShow = (t) => { const o = $("rpOut"); o.style.display = "block"; o.textContent = t; };
+$("rpWeek").onclick = async () => { try { const t = (await api("/api/users?report=1&days=7")).text; rpShow(t); try { await navigator.clipboard.writeText(t); toast("Report copied"); } catch (_) {} } catch (e) { toast(e.message, true); } };
+$("rpHealth").onclick = async () => { try { const h = await api("/api/users?health=1"); rpShow(`Redis ping: ${h.ping} ms\nLogs: ${h.logs} · Members: ${h.users} · Keys: ${h.keys}\nNode ${h.node}\n` + Object.entries(h.env).map(([k, v]) => (v ? "✅ " : "❌ ") + k).join("\n")); } catch (e) { toast(e.message, true); } };
+
+const cons = $("consIn"), cOut = $("cons"), cHist = []; let cPos = 0;
+const cPrint = (t, k) => { const d = document.createElement("div"); if (k) d.className = k; d.textContent = t; cOut.appendChild(d); cOut.scrollTop = cOut.scrollHeight; };
+const cFind = (q) => { q = String(q || "").replace(/^@/, "").toLowerCase(); return allUsers.find((u) => u.id === q || (u.username || "").toLowerCase() === q) || allUsers.find((u) => (u.name || "").toLowerCase() === q) || allUsers.find((u) => (u.name || "").toLowerCase().includes(q) || (u.username || "").toLowerCase().includes(q)); };
+const CMDS = {
+  help: "Commands:\n/stats  /whois <user>  /xp <user>  /top\n/role <user> <role> [days]  /timeout <user> <days>  /approve <user>  /approveall\n/kick <user>  /logout <user>  /logoutall  /note <user> <text>\n/ban <id> [reason]  /unban <id>  /pin <text>  /unpin  /maint on|off [msg]\n/purge <days>  /purgepending <days>  /report  /health  /clear\n<user> = name, @username or Discord ID.",
+};
+async function cRun(line) {
+  const [c0, ...a] = line.trim().replace(/^\//, "").split(/\s+/); const c = (c0 || "").toLowerCase(), rest = a.join(" ");
+  const post = (b) => api("/api/users", { method: "POST", body: b });
+  const U = (q) => { const u = cFind(q); if (!u) throw new Error('No member matches "' + q + '".'); return u; };
+  if (c === "help") return cPrint(CMDS.help);
+  if (c === "clear") { cOut.innerHTML = ""; return; }
+  if (!allUsers.length) await loadUsers(true);
+  if (c === "stats") { const r = {}; allUsers.forEach((u) => r[u.role] = (r[u.role] || 0) + 1); return cPrint(allUsers.length + " members · " + Object.entries(r).map(([k, v]) => k + " " + v).join(" · ") + " · " + allLogs.length + " recent logs"); }
+  if (c === "whois") { const u = U(a[0]); return cPrint(`${u.name} (@${u.username}) · ${u.role} · id ${u.id}\njoined ${pfDate(u.joined)} · last seen ${u.seen ? pfDate(u.seen) : "—"}${u.temp ? " · temporary until " + pfDate(u.temp.until) : ""}`); }
+  if (c === "xp") { const u = U(a[0]), x = (await api("/api/me?id=" + u.id)).xp; return cPrint(`${u.name}: Lv ${x.level} ${x.title} · ${x.xp} XP · #${x.rank || "—"} · streak ${x.streak}d (best ${x.best}) · ${x.badges.filter((b) => b.on).length}/${x.badges.length} badges`); }
+  if (c === "top") { const rows = (await api("/api/me?id=all")).rows.slice(0, 10); return cPrint(rows.map((r) => `#${r.rank} ${r.name} — Lv ${r.level}, ${r.xp} XP, ${r.logs} logs`).join("\n") || "No logs yet."); }
+  if (c === "role") { const u = U(a[0]); await post({ id: u.id, action: "setRole", role: (a[1] || "").toLowerCase(), tempDays: a[2] }); return cPrint(`${u.name} → ${a[1]}${a[2] ? " for " + a[2] + "d" : ""}`, "c"); }
+  if (c === "timeout") { const u = U(a[0]); await post({ id: u.id, action: "timeout", tempDays: a[1] }); return cPrint(`${u.name} timed out for ${a[1]}d`, "c"); }
+  if (c === "approve" || c === "kick" || c === "logout") { const u = U(a[0]); await post({ id: u.id, action: c === "logout" ? "forceLogout" : c }); return cPrint(`${c}: ${u.name}`, "c"); }
+  if (c === "note") { const u = U(a[0]); await post({ id: u.id, action: "addNote", text: a.slice(1).join(" ") }); return cPrint("Note added for " + u.name, "c"); }
+  if (c === "approveall" || c === "logoutall") { const r = await post({ action: c === "approveall" ? "approveAll" : "forceLogoutAll" }); return cPrint(r.count + " affected", "c"); }
+  if (c === "purgepending") { const r = await post({ action: "purgePending", days: a[0] }); return cPrint(r.count + " removed", "c"); }
+  if (c === "purge") { const r = await post({ action: "purgeLogs", days: a[0] }); return cPrint(r.removed + " logs removed", "c"); }
+  if (c === "ban" || c === "unban") { await post({ action: c + "Id", id: a[0], text: a.slice(1).join(" ") }); return cPrint(c + " " + a[0], "c"); }
+  if (c === "pin") { await post({ action: "pin", text: rest }); return cPrint("Pinned", "c"); }
+  if (c === "unpin") { await post({ action: "unpin" }); return cPrint("Pin removed", "c"); }
+  if (c === "maint") { await post({ action: "maintenance", on: a[0] === "on", msg: a.slice(1).join(" ") }); return cPrint("Maintenance " + (a[0] === "on" ? "ON" : "OFF"), "c"); }
+  if (c === "report") { const t = (await api("/api/users?report=1&days=7")).text; return cPrint(t); }
+  if (c === "health") { const h = await api("/api/users?health=1"); return cPrint(`Redis ${h.ping} ms · ${h.logs} logs · ${h.users} members · ${Object.entries(h.env).map(([k, v]) => (v ? "✅" : "❌") + k).join(" ")}`); }
+  throw new Error('Unknown command "/' + c + '". Try /help.');
+}
+async function cGo() {
+  const v = cons.value.trim(); if (!v) return; cHist.push(v); cPos = cHist.length; cons.value = ""; cPrint("> " + v, "c");
+  if (/^\/?(purge|purgepending|logoutall|approveall|ban|kick|maint)\b/i.test(v) && !(await confirmBox("Run this command?", v, "Run"))) return cPrint("Cancelled.");
+  try { await cRun(v); if (!/^\/?(help|clear|whois|xp|top|stats|report|health)\b/i.test(v)) loadAdmin(); } catch (e) { cPrint(e.message, "e"); }
+}
+$("consGo").onclick = cGo;
+cons.onkeydown = (e) => { if (e.key === "Enter") cGo(); else if (e.key === "ArrowUp" && cHist.length) { cPos = Math.max(0, cPos - 1); cons.value = cHist[cPos]; e.preventDefault(); } else if (e.key === "ArrowDown") { cPos = Math.min(cHist.length, cPos + 1); cons.value = cHist[cPos] || ""; } };
+cPrint("Type /help to see every command.");
+
 /* quizzes */
 .qz{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:10px;animation:pop .3s ease both}
 .qz h3{margin:0;font-size:16px}
@@ -1037,6 +1088,12 @@ html[data-theme="light"] aside{background:rgba(247,246,252,.98)}
   body:not(.nomotion) .topic,body:not(.nomotion) .set-sec,body:not(.nomotion) .adm-card{animation:none}
 }
 
+
+.xp{margin-top:14px;text-align:left}.xp-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px}.xp-h b{font-size:15px}
+.xp-bar{height:8px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin:6px 0}.xp-bar i{display:block;height:100%;background:var(--acc);border-radius:99px}
+.xp-meta{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;opacity:.75}.xp-spark{display:flex;align-items:flex-end;gap:3px;height:26px;margin:8px 0}.xp-spark i{flex:1;background:var(--acc);opacity:.7;border-radius:3px;min-height:2px}
+.xp-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.xp-badges span{font-size:12px;padding:3px 8px;border-radius:99px;background:rgba(255,255,255,.07)}.xp-badges span.off{opacity:.3;filter:grayscale(1)}
+.cons{background:#0b0d12;border:1px solid rgba(255,255,255,.08);border-radius:10px;font:12.5px/1.5 ui-monospace,Menlo,monospace;padding:10px;height:240px;overflow:auto;white-space:pre-wrap}.cons .e{color:#ff7b7b}.cons .c{color:#8fb4ff}.cons-in{display:flex;gap:8px;margin-top:8px}.cons-in input{flex:1;font-family:ui-monospace,Menlo,monospace}
 </style>
 </head>
 <body>
@@ -1362,6 +1419,25 @@ html[data-theme="light"] aside{background:rgba(247,246,252,.98)}
           <p class="mut adm-lock" id="admMaintState"></p>
           <div class="field"><input id="admMaintMsg" maxlength="200" placeholder="Message shown to members"></div>
           <button class="btn danger" id="admMaint">Turn on</button>
+        </div>
+      </div>
+      <div class="card adm-card" style="margin-top:18px;max-width:none"><h3>Command console</h3>
+        <div class="cons" id="cons"></div>
+        <div class="cons-in"><input id="consIn" autocomplete="off" spellcheck="false" placeholder="/help"><button class="btn" id="consGo">Run</button></div>
+      </div>
+      <div class="adm-grid" style="margin-top:18px">
+        <div class="card adm-card"><h3>Bulk tools</h3>
+          <div class="adm-row" style="flex-wrap:wrap"><button class="btn ok" id="bkApprove">Approve all pending</button><button class="btn ghost" id="bkLogout">Sign out everyone</button></div>
+          <div class="field" style="margin-top:12px"><label>Remove pending accounts older than (days)</label><div class="adm-row"><input id="bkDays" type="number" min="1" value="14"><button class="btn danger" id="bkPurge">Remove</button></div></div>
+        </div>
+        <div class="card adm-card"><h3>Timeout a member</h3>
+          <div class="field"><select id="toUser"></select></div>
+          <div class="adm-row"><input id="toDays" type="number" min="1" max="365" value="3"><button class="btn danger" id="toGo">Timeout (days)</button></div>
+          <p class="mut">Locked out for N days, then back to their old role.</p>
+        </div>
+        <div class="card adm-card"><h3>Report &amp; health</h3>
+          <div class="adm-row" style="flex-wrap:wrap"><button class="btn ghost" id="rpWeek">Weekly report</button><button class="btn ghost" id="rpHealth">System health</button></div>
+          <pre class="cons" id="rpOut" style="height:auto;max-height:200px;margin-top:10px;display:none"></pre>
         </div>
       </div>
       <div class="card adm-card" style="margin-top:18px;max-width:none"><h3>Staff activity</h3>
@@ -1920,6 +1996,14 @@ function insertAtCursor(field, value) {
 }
 const pfAccent = (u) => u.accent || u.color || "";
 function pfDate(t) { return t ? new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "—"; }
+function xpBlock(x) {
+  const pct = Math.max(0, Math.min(100, Math.round((x.xp - x.from) / Math.max(1, x.to - x.from) * 100))), mx = Math.max(1, ...x.spark);
+  return `<div class="xp"><div class="xp-h"><b>Lv ${x.level} · ${esc(x.title)}</b><span>${x.xp} XP${x.rank ? " · #" + x.rank + "/" + x.of : ""}</span></div>
+    <div class="xp-bar"><i style="width:${pct}%"></i></div>
+    <div class="xp-meta"><span>${x.to - x.xp} XP to Lv ${x.level + 1}</span><span>🔥 ${x.streak}d streak (best ${x.best})</span><span>${x.week} logs this week</span></div>
+    <div class="xp-spark" title="Logs, last 7 days">${x.spark.map((n) => `<i style="height:${Math.round(n / mx * 100)}%"></i>`).join("")}</div>
+    <div class="xp-badges">${x.badges.map((b) => `<span class="${b.on ? "" : "off"}" title="${esc(b.desc)}">${b.icon} ${esc(b.name)}</span>`).join("")}</div></div>`;
+}
 async function showProfileCard(data) {
   let profile = {};
   try { profile = typeof data === "string" ? JSON.parse(data) : data; } catch (_) { return; }
@@ -1945,6 +2029,7 @@ async function showProfileCard(data) {
           <div><b>${pfDate(user.joined)}</b><span>Member since</span></div>
           <div><b>${user.seen ? pfDate(user.seen) : "—"}</b><span>Last login</span></div>
         </div>` : '<div class="profile-pop-meta" style="margin-top:12px">Loading…</div>'}
+        ${info && info.xp ? xpBlock(info.xp) : ""}
         ${own ? `<div class="profile-pop-actions"><button class="btn sm" type="button" data-edit-profile><svg class="ic"><use href="#i-edit"/></svg>Edit profile</button></div>` : ""}
       </div></div>`;
     const ed = overlay.querySelector("[data-edit-profile]");
@@ -2562,6 +2647,7 @@ async function loadAdmin() {
     $("admExport").disabled = lock;
     $("admLog").innerHTML = ov.adminlog.length ? ov.adminlog.map((l, i) => `<div><b>${esc(l.by)}</b><span>${esc(l.text)}</span>${l.undo ? `<button class="btn sm ghost" data-undo="${i}">Undo</button>` : ""}<time>${new Date(l.at).toLocaleString()}</time></div>`).join("") : '<div class="mut">No admin activity yet.</div>';
     document.querySelectorAll("[data-undo]").forEach((b) => b.onclick = () => admCall({ action: "undo", index: b.dataset.undo }, () => "Action undone"));
+    $("toUser").innerHTML = opt(below.filter((u) => u.role !== "banned")) || "<option value=''>Nobody</option>";
     $("admTool").innerHTML = opt(below) || "<option value=''>Nobody</option>";
     $("admMaint").disabled = $("admForum").disabled = lock;
     $("admMaint").textContent = ov.maint.on ? "Turn off" : "Turn on";
