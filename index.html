@@ -1055,6 +1055,11 @@ html[data-theme="light"] aside{background:rgba(247,246,252,.98)}
 #kbg{position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.55);display:flex;justify-content:center;align-items:flex-start;padding-top:12vh}
 #kbox{width:min(560px,92vw);background:#12151c;border:1px solid rgba(255,255,255,.12);border-radius:14px;overflow:hidden}#kbox input{width:100%;border:0;border-bottom:1px solid rgba(255,255,255,.1);border-radius:0;padding:14px 16px;font-size:16px;background:transparent}
 #klist{max-height:320px;overflow:auto}#klist div{padding:10px 16px;cursor:pointer;display:flex;justify-content:space-between;gap:10px}#klist div.on{background:rgba(255,255,255,.08)}#klist small{opacity:.5}
+.pf-heat{display:grid;grid-template-rows:repeat(7,1fr);grid-auto-flow:column;gap:3px;margin:8px 0}.pf-heat i{aspect-ratio:1;border-radius:3px;background:rgba(255,255,255,.07)}
+.pf-heat i.l1{background:color-mix(in srgb,var(--acc) 35%,transparent)}.pf-heat i.l2{background:color-mix(in srgb,var(--acc) 60%,transparent)}.pf-heat i.l3{background:color-mix(in srgb,var(--acc) 82%,transparent)}.pf-heat i.l4{background:var(--acc)}
+.pf-bars div{display:flex;align-items:center;gap:8px;font-size:12px;margin:3px 0}.pf-bars b{width:46px;font-weight:600}.pf-bars span{flex:1;height:6px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}.pf-bars span i{display:block;height:100%;background:var(--acc)}
+.pf-sec{margin-top:12px;font-size:12px;opacity:.6;text-transform:uppercase;letter-spacing:.08em}.pf-recent div{display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:3px 0;opacity:.85}
+.xp-badges.show span{font-size:13px;padding:4px 10px;background:color-mix(in srgb,var(--acc) 22%,transparent)}.lvchip{font-size:11px;padding:1px 7px;border-radius:99px;background:color-mix(in srgb,var(--acc) 22%,transparent);margin-left:6px;font-weight:700}
 </style>
 </head>
 <body>
@@ -1982,13 +1987,21 @@ function insertAtCursor(field, value) {
 }
 const pfAccent = (u) => u.accent || u.color || "";
 function pfDate(t) { return t ? new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "—"; }
-function xpBlock(x) {
+function xpBlock(x, own) {
   const pct = Math.max(0, Math.min(100, Math.round((x.xp - x.from) / Math.max(1, x.to - x.from) * 100))), mx = Math.max(1, ...x.spark);
-  return `<div class="xp"><div class="xp-h"><b>Lv ${x.level} · ${esc(x.title)}</b><span>${x.xp} XP${x.rank ? " · #" + x.rank + "/" + x.of : ""}</span></div>
+  const hm = Math.max(1, ...x.heat), lv = (n) => !n ? "" : "l" + Math.min(4, Math.ceil(n / hm * 4));
+  const tot = Math.max(1, Object.values(x.actions).reduce((a, n) => a + n, 0)), acts = Object.entries(x.actions).sort((a, b) => b[1] - a[1]);
+  const show = (x.showcase || []).map((id) => x.badges.find((b) => b.id === id && b.on)).filter(Boolean);
+  return `<div class="xp">${show.length ? `<div class="xp-badges show" style="margin:0 0 10px">${show.map((b) => `<span title="${esc(b.desc)}">${b.icon} ${esc(b.name)}</span>`).join("")}</div>` : ""}
+    <div class="xp-h"><b>Lv ${x.level} · ${esc(x.shown || x.title)}</b><span>${x.xp} XP${x.rank ? " · #" + x.rank + "/" + x.of : ""}</span></div>
     <div class="xp-bar"><i style="width:${pct}%"></i></div>${x.quest ? `<div class="xp-meta">🎯 Quest: ${Math.min(x.quest.done, x.quest.goal)}/${x.quest.goal} logs · +${x.quest.bonus} XP</div>` : ""}
-    <div class="xp-meta"><span>${x.to - x.xp} XP to Lv ${x.level + 1}</span><span>🔥 ${x.streak}d streak (best ${x.best})</span><span>${x.week} logs this week</span></div>
-    <div class="xp-spark" title="Logs, last 7 days">${x.spark.map((n) => `<i style="height:${Math.round(n / mx * 100)}%"></i>`).join("")}</div>
-    <div class="xp-badges">${x.badges.map((b) => `<span class="${b.on ? "" : "off"}" title="${esc(b.desc)}">${b.icon} ${esc(b.name)}</span>`).join("")}</div></div>`;
+    <div class="xp-meta"><span>${x.to - x.xp} XP to Lv ${x.level + 1}</span><span>🔥 ${x.streak}d (best ${x.best})</span><span>📅 ${x.month} XP this month</span><span>👏 ${x.kudos || 0} kudos</span></div>
+    <div class="xp-meta" style="margin-top:4px"><span>${x.logs} logs</span><span>${x.activeDays} active days</span><span>${x.activeDays ? (x.logs / x.activeDays).toFixed(1) : 0} logs/day</span>${x.first ? `<span>since ${pfDate(x.first)}</span>` : ""}</div>
+    <div class="pf-sec">Activity · last 12 weeks</div><div class="pf-heat" title="Logs per day">${x.heat.map((n, i) => `<i class="${lv(n)}" title="${n} logs"></i>`).join("")}</div>
+    ${acts.length ? `<div class="pf-sec">Actions</div><div class="pf-bars">${acts.map(([k, n]) => `<div><b>${esc(k)}</b><span><i style="width:${Math.round(n / tot * 100)}%"></i></span><em>${n}</em></div>`).join("")}</div>` : ""}
+    ${x.recent && x.recent.length ? `<div class="pf-sec">Recent</div><div class="pf-recent">${x.recent.map((r) => `<div><span>${esc(r.action)} · ${esc(r.target)}</span><span>${pfDate(r.at)}</span></div>`).join("")}</div>` : ""}
+    <details style="margin-top:10px"><summary class="pf-sec" style="cursor:pointer">Badges ${x.badges.filter((b) => b.on).length}/${x.badges.length}</summary>
+    <div class="xp-badges">${x.badges.map((b) => `<span class="${b.on ? "" : "off"}" title="${esc(b.desc)}">${b.icon} ${esc(b.name)}</span>`).join("")}</div></details></div>`;
 }
 async function showProfileCard(data) {
   let profile = {};
@@ -2006,7 +2019,7 @@ async function showProfileCard(data) {
         <button class="icon-btn profile-pop-close" type="button" aria-label="Close">×</button>
         <img class="profile-pop-avatar" src="${esc(user.avatar || "https://cdn.discordapp.com/embed/avatars/0.png")}" alt="" style="${acc ? `border-color:${esc(acc)}` : ""}">
         <div class="profile-pop-name">${esc(user.name || "Member")}</div>
-        <div class="profile-pop-meta">${user.role ? `<span class="role ${esc(user.role)}">${esc(user.role)}</span>` : ""}${user.username ? ` · @${esc(user.username)}` : ""}</div>
+        <div class="profile-pop-meta">${user.role ? `<span class="role ${esc(user.role)}">${esc(user.role)}</span>` : ""}${user.username ? ` · @${esc(user.username)}` : ""}${user.pronouns ? ` · ${esc(user.pronouns)}` : ""}</div>
         ${user.status ? `<div class="profile-pop-status"><svg class="ic"><use href="#i-chat"/></svg>${esc(user.status)}</div>` : ""}
         ${user.bio ? `<div class="profile-pop-bio">${esc(user.bio)}</div>` : ""}
         ${info ? `<div class="profile-pop-stats">
@@ -2015,9 +2028,12 @@ async function showProfileCard(data) {
           <div><b>${pfDate(user.joined)}</b><span>Member since</span></div>
           <div><b>${user.seen ? pfDate(user.seen) : "—"}</b><span>Last login</span></div>
         </div>` : '<div class="profile-pop-meta" style="margin-top:12px">Loading…</div>'}
-        ${info && info.xp ? xpBlock(info.xp) : ""}
+        ${info && info.xp ? xpBlock({ ...info.xp, showcase: user.showcase }) : ""}
+        ${info && info.xp && info.xp.canKudos ? `<div class="profile-pop-actions"><button class="btn sm" type="button" data-kudos="${esc(user.id)}">👏 Give kudos</button></div>` : ""}
         ${own ? `<div class="profile-pop-actions"><button class="btn sm" type="button" data-edit-profile><svg class="ic"><use href="#i-edit"/></svg>Edit profile</button></div>` : ""}
       </div></div>`;
+    const kb = overlay.querySelector("[data-kudos]");
+    if (kb) kb.onclick = async () => { try { await api("/api/me", { method: "POST", body: { kudos: kb.dataset.kudos } }); toast("Kudos sent 👏"); close(); showProfileCard(profile); } catch (e) { toast(e.message, true); } };
     const ed = overlay.querySelector("[data-edit-profile]");
     if (ed) ed.onclick = () => { close(); editProfile(); };
   };
@@ -2030,12 +2046,16 @@ async function showProfileCard(data) {
     if (overlay.isConnected) paint(profile, null), overlay.querySelector(".profile-pop-content").insertAdjacentHTML("beforeend", `<div class="profile-pop-meta">${esc(e.message)}</div>`);
   }
 }
-function editProfile() {
+async function editProfile() {
+  let xx = null; try { xx = (await api("/api/me?id=" + encodeURIComponent(me.id))).xp; } catch (_) {}
   const bg = document.createElement("div");
   bg.className = "modal-bg";
   bg.innerHTML = `<div class="modal pe"><h3>Edit profile</h3>
     <label>Status</label><input id="peStatus" maxlength="60" placeholder="What are you up to?" value="${esc(me.status || "")}">
     <label>About me <span id="peCount"></span></label><textarea id="peBio" maxlength="200" placeholder="A few words about you…">${esc(me.bio || "")}</textarea>
+    <label>Pronouns</label><input id="pePro" maxlength="20" placeholder="e.g. he/him" value="${esc(me.pronouns || "")}">
+    ${xx ? `<label>Title</label><select id="peTitle"><option value="">Auto (${esc(xx.title)})</option>${xx.titles.map((t) => `<option ${me.title === t ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>
+    <label>Showcased badges (up to 3)</label><div class="xp-badges" id="peShow">${xx.badges.filter((b) => b.on).map((b) => `<label style="cursor:pointer"><input type="checkbox" value="${b.id}" ${(me.showcase || []).includes(b.id) ? "checked" : ""}> ${b.icon} ${esc(b.name)}</label>`).join("") || "<span class='mut'>Earn badges to showcase them.</span>"}</div>` : ""}
     <label>Profile color</label>
     <div style="display:flex;gap:10px;align-items:center"><input type="color" id="peColor" style="width:56px;height:38px;padding:2px" value="${esc(me.accent || me.color || "#7c6cff")}">
     <button class="btn ghost sm" type="button" id="peReset">Use Discord color</button></div>
@@ -2052,7 +2072,7 @@ function editProfile() {
   g("peSave").onclick = async () => {
     g("peSave").disabled = true;
     try {
-      me = (await api("/api/me", { method: "POST", body: { bio: g("peBio").value, status: g("peStatus").value, accent } })).user;
+      me = (await api("/api/me", { method: "POST", body: { bio: g("peBio").value, status: g("peStatus").value, accent, pronouns: g("pePro").value, title: g("peTitle") ? g("peTitle").value : "", showcase: [...bg.querySelectorAll("#peShow input:checked")].map((i) => i.value).slice(0, 3) } })).user;
       paintMeCard(); bg.remove(); toast("Profile saved");
     } catch (err) { toast(err.message, true); g("peSave").disabled = false; }
   };
@@ -2304,7 +2324,12 @@ document.addEventListener("click",e=>{
   document.querySelectorAll("[data-theme-choice]").forEach(x=>x.classList.toggle("active",x===b));
 });
 
+async function loadXpRows() {
+  if (window.__xpRows && Date.now() - (window.__xpAt || 0) < 60000) return;
+  try { const m = {}; (await api("/api/me?id=all")).rows.forEach((r) => { m[r.id] = r.level; }); window.__xpRows = m; window.__xpAt = Date.now(); if (!$("v-leaderboard").classList.contains("hide")) renderLeaderboard(); } catch (_) {}
+}
 function renderLeaderboard() {
+  if (!window.__xpAt) loadXpRows();
   const now = Date.now();
   const cutoff = leaderboardPeriod === "all" ? 0 : now - Number(leaderboardPeriod) * 86400000;
   const logs = allLogs.filter((l) => {
@@ -2357,7 +2382,7 @@ function renderLeaderboard() {
     return `<div class="lb-row">
       <div class="lb-rank">#${i + 1}</div>
       <div class="lb-person">${p.avatar ? `<img class="lb-avatar" src="${esc(p.avatar)}" alt="">` : `<div class="lb-avatar"></div>`}
-        <div class="lb-person-name" title="${esc(p.name)}">${esc(p.name)}</div></div>
+        <div class="lb-person-name" title="${esc(p.name)}">${esc(p.name)}${(window.__xpRows || {})[p.id] ? `<span class="lvchip">Lv ${window.__xpRows[p.id]}</span>` : ""}</div></div>
       <div class="lb-breakdown">${breakdown}</div>
       <div class="lb-total">${p.total}</div>
     </div>`;
