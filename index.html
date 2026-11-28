@@ -224,55 +224,6 @@ label{display:block;font-weight:600;font-size:13px;margin:0 0 7px;color:#cfd5e3}
 
 
 
-/* admin extras: bulk tools, timeout, report, health, command console */
-$("bkApprove").onclick = async () => { if (await confirmBox("Approve everyone pending?", "They all become mods.", "Approve all", false)) admCall({ action: "approveAll" }, (r) => r.count + " approved"); };
-$("bkLogout").onclick = async () => { if (await confirmBox("Sign out everyone?", "Every member ranked below you must sign in again.", "Sign out")) admCall({ action: "forceLogoutAll" }, (r) => r.count + " signed out"); };
-$("bkPurge").onclick = async () => { const d = $("bkDays").value; if (await confirmBox("Remove old pending accounts?", "Pending for more than " + d + " days.", "Remove")) admCall({ action: "purgePending", days: d }, (r) => r.count + " removed"); };
-$("toGo").onclick = async () => { const id = $("toUser").value; if (id && await confirmBox("Timeout this member?", "They are locked out for " + $("toDays").value + " days.", "Timeout")) admCall({ id, action: "timeout", tempDays: $("toDays").value }, () => "Timed out"); };
-const rpShow = (t) => { const o = $("rpOut"); o.style.display = "block"; o.textContent = t; };
-$("rpWeek").onclick = async () => { try { const t = (await api("/api/users?report=1&days=7")).text; rpShow(t); try { await navigator.clipboard.writeText(t); toast("Report copied"); } catch (_) {} } catch (e) { toast(e.message, true); } };
-$("rpHealth").onclick = async () => { try { const h = await api("/api/users?health=1"); rpShow(`Redis ping: ${h.ping} ms\nLogs: ${h.logs} · Members: ${h.users} · Keys: ${h.keys}\nNode ${h.node}\n` + Object.entries(h.env).map(([k, v]) => (v ? "✅ " : "❌ ") + k).join("\n")); } catch (e) { toast(e.message, true); } };
-
-const cons = $("consIn"), cOut = $("cons"), cHist = []; let cPos = 0;
-const cPrint = (t, k) => { const d = document.createElement("div"); if (k) d.className = k; d.textContent = t; cOut.appendChild(d); cOut.scrollTop = cOut.scrollHeight; };
-const cFind = (q) => { q = String(q || "").replace(/^@/, "").toLowerCase(); return allUsers.find((u) => u.id === q || (u.username || "").toLowerCase() === q) || allUsers.find((u) => (u.name || "").toLowerCase() === q) || allUsers.find((u) => (u.name || "").toLowerCase().includes(q) || (u.username || "").toLowerCase().includes(q)); };
-const CMDS = {
-  help: "Commands:\n/stats  /whois <user>  /xp <user>  /top\n/role <user> <role> [days]  /timeout <user> <days>  /approve <user>  /approveall\n/kick <user>  /logout <user>  /logoutall  /note <user> <text>\n/ban <id> [reason]  /unban <id>  /pin <text>  /unpin  /maint on|off [msg]\n/purge <days>  /purgepending <days>  /report  /health  /clear\n<user> = name, @username or Discord ID.",
-};
-async function cRun(line) {
-  const [c0, ...a] = line.trim().replace(/^\//, "").split(/\s+/); const c = (c0 || "").toLowerCase(), rest = a.join(" ");
-  const post = (b) => api("/api/users", { method: "POST", body: b });
-  const U = (q) => { const u = cFind(q); if (!u) throw new Error('No member matches "' + q + '".'); return u; };
-  if (c === "help") return cPrint(CMDS.help);
-  if (c === "clear") { cOut.innerHTML = ""; return; }
-  if (!allUsers.length) await loadUsers(true);
-  if (c === "stats") { const r = {}; allUsers.forEach((u) => r[u.role] = (r[u.role] || 0) + 1); return cPrint(allUsers.length + " members · " + Object.entries(r).map(([k, v]) => k + " " + v).join(" · ") + " · " + allLogs.length + " recent logs"); }
-  if (c === "whois") { const u = U(a[0]); return cPrint(`${u.name} (@${u.username}) · ${u.role} · id ${u.id}\njoined ${pfDate(u.joined)} · last seen ${u.seen ? pfDate(u.seen) : "—"}${u.temp ? " · temporary until " + pfDate(u.temp.until) : ""}`); }
-  if (c === "xp") { const u = U(a[0]), x = (await api("/api/me?id=" + u.id)).xp; return cPrint(`${u.name}: Lv ${x.level} ${x.title} · ${x.xp} XP · #${x.rank || "—"} · streak ${x.streak}d (best ${x.best}) · ${x.badges.filter((b) => b.on).length}/${x.badges.length} badges`); }
-  if (c === "top") { const rows = (await api("/api/me?id=all")).rows.slice(0, 10); return cPrint(rows.map((r) => `#${r.rank} ${r.name} — Lv ${r.level}, ${r.xp} XP, ${r.logs} logs`).join("\n") || "No logs yet."); }
-  if (c === "role") { const u = U(a[0]); await post({ id: u.id, action: "setRole", role: (a[1] || "").toLowerCase(), tempDays: a[2] }); return cPrint(`${u.name} → ${a[1]}${a[2] ? " for " + a[2] + "d" : ""}`, "c"); }
-  if (c === "timeout") { const u = U(a[0]); await post({ id: u.id, action: "timeout", tempDays: a[1] }); return cPrint(`${u.name} timed out for ${a[1]}d`, "c"); }
-  if (c === "approve" || c === "kick" || c === "logout") { const u = U(a[0]); await post({ id: u.id, action: c === "logout" ? "forceLogout" : c }); return cPrint(`${c}: ${u.name}`, "c"); }
-  if (c === "note") { const u = U(a[0]); await post({ id: u.id, action: "addNote", text: a.slice(1).join(" ") }); return cPrint("Note added for " + u.name, "c"); }
-  if (c === "approveall" || c === "logoutall") { const r = await post({ action: c === "approveall" ? "approveAll" : "forceLogoutAll" }); return cPrint(r.count + " affected", "c"); }
-  if (c === "purgepending") { const r = await post({ action: "purgePending", days: a[0] }); return cPrint(r.count + " removed", "c"); }
-  if (c === "purge") { const r = await post({ action: "purgeLogs", days: a[0] }); return cPrint(r.removed + " logs removed", "c"); }
-  if (c === "ban" || c === "unban") { await post({ action: c + "Id", id: a[0], text: a.slice(1).join(" ") }); return cPrint(c + " " + a[0], "c"); }
-  if (c === "pin") { await post({ action: "pin", text: rest }); return cPrint("Pinned", "c"); }
-  if (c === "unpin") { await post({ action: "unpin" }); return cPrint("Pin removed", "c"); }
-  if (c === "maint") { await post({ action: "maintenance", on: a[0] === "on", msg: a.slice(1).join(" ") }); return cPrint("Maintenance " + (a[0] === "on" ? "ON" : "OFF"), "c"); }
-  if (c === "report") { const t = (await api("/api/users?report=1&days=7")).text; return cPrint(t); }
-  if (c === "health") { const h = await api("/api/users?health=1"); return cPrint(`Redis ${h.ping} ms · ${h.logs} logs · ${h.users} members · ${Object.entries(h.env).map(([k, v]) => (v ? "✅" : "❌") + k).join(" ")}`); }
-  throw new Error('Unknown command "/' + c + '". Try /help.');
-}
-async function cGo() {
-  const v = cons.value.trim(); if (!v) return; cHist.push(v); cPos = cHist.length; cons.value = ""; cPrint("> " + v, "c");
-  if (/^\/?(purge|purgepending|logoutall|approveall|ban|kick|maint)\b/i.test(v) && !(await confirmBox("Run this command?", v, "Run"))) return cPrint("Cancelled.");
-  try { await cRun(v); if (!/^\/?(help|clear|whois|xp|top|stats|report|health)\b/i.test(v)) loadAdmin(); } catch (e) { cPrint(e.message, "e"); }
-}
-$("consGo").onclick = cGo;
-cons.onkeydown = (e) => { if (e.key === "Enter") cGo(); else if (e.key === "ArrowUp" && cHist.length) { cPos = Math.max(0, cPos - 1); cons.value = cHist[cPos]; e.preventDefault(); } else if (e.key === "ArrowDown") { cPos = Math.min(cHist.length, cPos + 1); cons.value = cHist[cPos] || ""; } };
-cPrint("Type /help to see every command.");
 
 /* quizzes */
 .qz{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:10px;animation:pop .3s ease both}
@@ -1094,6 +1045,11 @@ html[data-theme="light"] aside{background:rgba(247,246,252,.98)}
 .xp-meta{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;opacity:.75}.xp-spark{display:flex;align-items:flex-end;gap:3px;height:26px;margin:8px 0}.xp-spark i{flex:1;background:var(--acc);opacity:.7;border-radius:3px;min-height:2px}
 .xp-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.xp-badges span{font-size:12px;padding:3px 8px;border-radius:99px;background:rgba(255,255,255,.07)}.xp-badges span.off{opacity:.3;filter:grayscale(1)}
 .cons{background:#0b0d12;border:1px solid rgba(255,255,255,.08);border-radius:10px;font:12.5px/1.5 ui-monospace,Menlo,monospace;padding:10px;height:240px;overflow:auto;white-space:pre-wrap}.cons .e{color:#ff7b7b}.cons .c{color:#8fb4ff}.cons-in{display:flex;gap:8px;margin-top:8px}.cons-in input{flex:1;font-family:ui-monospace,Menlo,monospace}
+
+#flash{position:fixed;left:0;right:0;top:0;z-index:99999;display:flex;justify-content:center;pointer-events:none;transform:translateY(-120%);transition:transform .35s cubic-bezier(.2,.9,.3,1)}
+#flash.on{transform:none}#flash div{margin-top:14px;max-width:min(92vw,760px);padding:14px 26px;border-radius:12px;background:rgba(14,16,22,.96);border:2px solid var(--acc);box-shadow:0 10px 40px rgba(0,0,0,.5);text-align:center;font-weight:700;font-size:18px}
+#flash small{display:block;font-size:11px;letter-spacing:.15em;opacity:.7;margin-bottom:4px}#flash.warn div{border-color:var(--warn)}#flash.urgent div{border-color:var(--ban);color:#ff8f8f}
+#xpchip{position:fixed;right:14px;bottom:14px;z-index:9999;padding:8px 14px;border-radius:99px;background:rgba(14,16,22,.95);border:2px solid var(--warn);font-weight:700;font-size:13px;box-shadow:0 6px 24px rgba(0,0,0,.4)}
 </style>
 </head>
 <body>
@@ -1434,6 +1390,14 @@ html[data-theme="light"] aside{background:rgba(247,246,252,.98)}
           <div class="field"><select id="toUser"></select></div>
           <div class="adm-row"><input id="toDays" type="number" min="1" max="365" value="3"><button class="btn danger" id="toGo">Timeout (days)</button></div>
           <p class="mut">Locked out for N days, then back to their old role.</p>
+        </div>
+        <div class="card adm-card"><h3>Flash message</h3>
+          <div class="field"><input id="flText" maxlength="160" placeholder="Shown to everyone for a few seconds"></div>
+          <div class="adm-row"><select id="flStyle"><option value="info">Info</option><option value="warn">Warning</option><option value="urgent">Urgent</option></select><input id="flSecs" type="number" min="3" max="20" value="6" title="Seconds"><button class="btn" id="flGo">Send</button></div>
+        </div>
+        <div class="card adm-card"><h3>XP event</h3>
+          <p class="mut" id="xeState">No event running.</p>
+          <div class="adm-row"><select id="xeMult"><option value="2">x2</option><option value="3">x3</option><option value="4">x4</option></select><input id="xeMins" type="number" min="1" max="1440" value="60" title="Minutes"><button class="btn" id="xeGo">Start</button><button class="btn ghost" id="xeOff">Stop</button></div>
         </div>
         <div class="card adm-card"><h3>Report &amp; health</h3>
           <div class="adm-row" style="flex-wrap:wrap"><button class="btn ghost" id="rpWeek">Weekly report</button><button class="btn ghost" id="rpHealth">System health</button></div>
@@ -2126,7 +2090,7 @@ function paintPin() {
 }
 async function init() {
   try {
-    const mm = await api("/api/me"); me = mm.user; window.__pin = mm.pin || null;
+    const mm = await api("/api/me"); me = mm.user; window.__pin = mm.pin || null; flashSeen = mm.flash ? mm.flash.id : null; setTimeout(() => paintXpEvent(mm.xpEvent), 0);
   } catch (e) {
     if (e.status === 503) {
       $("blockedAv").src = ""; $("blockedPulse").classList.add("noring");
@@ -2716,6 +2680,85 @@ $("admExport").onclick = async () => {
   } catch (e) { toast(e.message, true); }
 };
 
+
+/* XP events */
+let xpEv = null;
+function paintXpEvent(ev) {
+  xpEv = ev && ev.until > Date.now() ? ev : null;
+  const c = $("xpchip"); if (c) { c.classList.toggle("hide", !xpEv); if (xpEv) c.textContent = "⚡ x" + xpEv.mult + " XP · " + Math.max(1, Math.ceil((xpEv.until - Date.now()) / 60000)) + " min left"; }
+  const st = $("xeState"); if (st) st.textContent = xpEv ? "x" + xpEv.mult + " running (by " + xpEv.by + ")." : "No event running.";
+}
+setInterval(() => paintXpEvent(xpEv), 15000);
+$("xeGo").onclick = async () => { try { await api("/api/users", { method: "POST", body: { action: "xpEvent", mult: $("xeMult").value, mins: $("xeMins").value } }); toast("XP event started"); checkFlash((await api("/api/me")).flash); } catch (e) { toast(e.message, true); } };
+$("xeOff").onclick = async () => { try { await api("/api/users", { method: "POST", body: { action: "xpEvent", mult: 1 } }); paintXpEvent(null); toast("XP event stopped"); } catch (e) { toast(e.message, true); } };
+
+/* flash announcements (Roblox-style server message) */
+let flashSeen = null, flashTimer = null;
+function showFlash(f) {
+  const el = $("flash"); if (!el || !f) return;
+  el.className = f.style || "info"; el.firstChild.innerHTML = `<small>SERVER MESSAGE · ${esc(f.by)}</small>${esc(f.text)}`;
+  void el.offsetWidth; el.classList.add("on");
+  clearTimeout(flashTimer); flashTimer = setTimeout(() => el.classList.remove("on"), f.secs * 1000);
+}
+function checkFlash(f) {
+  if (!f || f.id === flashSeen) return; flashSeen = f.id;
+  if (Date.now() - f.at < (f.secs + 10) * 1000) showFlash(f);
+}
+setInterval(async () => { if (!me || document.hidden) return; try { const r = await api("/api/me"); checkFlash(r.flash); paintXpEvent(r.xpEvent); } catch (_) {} }, 7000);
+$("flGo").onclick = async () => { const text = $("flText").value.trim(); if (!text) return; try { await api("/api/users", { method: "POST", body: { action: "flash", text, secs: $("flSecs").value, style: $("flStyle").value } }); $("flText").value = ""; toast("Sent"); } catch (e) { toast(e.message, true); } };
+
+/* admin extras: bulk tools, timeout, report, health, command console */
+$("bkApprove").onclick = async () => { if (await confirmBox("Approve everyone pending?", "They all become mods.", "Approve all", false)) admCall({ action: "approveAll" }, (r) => r.count + " approved"); };
+$("bkLogout").onclick = async () => { if (await confirmBox("Sign out everyone?", "Every member ranked below you must sign in again.", "Sign out")) admCall({ action: "forceLogoutAll" }, (r) => r.count + " signed out"); };
+$("bkPurge").onclick = async () => { const d = $("bkDays").value; if (await confirmBox("Remove old pending accounts?", "Pending for more than " + d + " days.", "Remove")) admCall({ action: "purgePending", days: d }, (r) => r.count + " removed"); };
+$("toGo").onclick = async () => { const id = $("toUser").value; if (id && await confirmBox("Timeout this member?", "They are locked out for " + $("toDays").value + " days.", "Timeout")) admCall({ id, action: "timeout", tempDays: $("toDays").value }, () => "Timed out"); };
+const rpShow = (t) => { const o = $("rpOut"); o.style.display = "block"; o.textContent = t; };
+$("rpWeek").onclick = async () => { try { const t = (await api("/api/users?report=1&days=7")).text; rpShow(t); try { await navigator.clipboard.writeText(t); toast("Report copied"); } catch (_) {} } catch (e) { toast(e.message, true); } };
+$("rpHealth").onclick = async () => { try { const h = await api("/api/users?health=1"); rpShow(`Redis ping: ${h.ping} ms\nLogs: ${h.logs} · Members: ${h.users} · Keys: ${h.keys}\nNode ${h.node}\n` + Object.entries(h.env).map(([k, v]) => (v ? "✅ " : "❌ ") + k).join("\n")); } catch (e) { toast(e.message, true); } };
+
+const cons = $("consIn"), cOut = $("cons"), cHist = []; let cPos = 0;
+const cPrint = (t, k) => { const d = document.createElement("div"); if (k) d.className = k; d.textContent = t; cOut.appendChild(d); cOut.scrollTop = cOut.scrollHeight; };
+const cFind = (q) => { q = String(q || "").replace(/^@/, "").toLowerCase(); return allUsers.find((u) => u.id === q || (u.username || "").toLowerCase() === q) || allUsers.find((u) => (u.name || "").toLowerCase() === q) || allUsers.find((u) => (u.name || "").toLowerCase().includes(q) || (u.username || "").toLowerCase().includes(q)); };
+const CMDS = {
+  help: "Commands:\n/stats  /whois <user>  /xp <user>  /top\n/role <user> <role> [days]  /timeout <user> <days>  /approve <user>  /approveall\n/kick <user>  /logout <user>  /logoutall  /note <user> <text>\n/ban <id> [reason]  /unban <id>  /xpevent <2|3|4|off> [min]  /flash <text>  /pin <text>  /unpin  /maint on|off [msg]\n/purge <days>  /purgepending <days>  /report  /health  /clear\n<user> = name, @username or Discord ID.",
+};
+async function cRun(line) {
+  const [c0, ...a] = line.trim().replace(/^\//, "").split(/\s+/); const c = (c0 || "").toLowerCase(), rest = a.join(" ");
+  const post = (b) => api("/api/users", { method: "POST", body: b });
+  const U = (q) => { const u = cFind(q); if (!u) throw new Error('No member matches "' + q + '".'); return u; };
+  if (c === "help") return cPrint(CMDS.help);
+  if (c === "clear") { cOut.innerHTML = ""; return; }
+  if (!allUsers.length) await loadUsers(true);
+  if (c === "stats") { const r = {}; allUsers.forEach((u) => r[u.role] = (r[u.role] || 0) + 1); return cPrint(allUsers.length + " members · " + Object.entries(r).map(([k, v]) => k + " " + v).join(" · ") + " · " + allLogs.length + " recent logs"); }
+  if (c === "whois") { const u = U(a[0]); return cPrint(`${u.name} (@${u.username}) · ${u.role} · id ${u.id}\njoined ${pfDate(u.joined)} · last seen ${u.seen ? pfDate(u.seen) : "—"}${u.temp ? " · temporary until " + pfDate(u.temp.until) : ""}`); }
+  if (c === "xp") { const u = U(a[0]), x = (await api("/api/me?id=" + u.id)).xp; return cPrint(`${u.name}: Lv ${x.level} ${x.title} · ${x.xp} XP · #${x.rank || "—"} · streak ${x.streak}d (best ${x.best}) · ${x.badges.filter((b) => b.on).length}/${x.badges.length} badges`); }
+  if (c === "top") { const rows = (await api("/api/me?id=all")).rows.slice(0, 10); return cPrint(rows.map((r) => `#${r.rank} ${r.name} — Lv ${r.level}, ${r.xp} XP, ${r.logs} logs`).join("\n") || "No logs yet."); }
+  if (c === "role") { const u = U(a[0]); await post({ id: u.id, action: "setRole", role: (a[1] || "").toLowerCase(), tempDays: a[2] }); return cPrint(`${u.name} → ${a[1]}${a[2] ? " for " + a[2] + "d" : ""}`, "c"); }
+  if (c === "timeout") { const u = U(a[0]); await post({ id: u.id, action: "timeout", tempDays: a[1] }); return cPrint(`${u.name} timed out for ${a[1]}d`, "c"); }
+  if (c === "approve" || c === "kick" || c === "logout") { const u = U(a[0]); await post({ id: u.id, action: c === "logout" ? "forceLogout" : c }); return cPrint(`${c}: ${u.name}`, "c"); }
+  if (c === "note") { const u = U(a[0]); await post({ id: u.id, action: "addNote", text: a.slice(1).join(" ") }); return cPrint("Note added for " + u.name, "c"); }
+  if (c === "approveall" || c === "logoutall") { const r = await post({ action: c === "approveall" ? "approveAll" : "forceLogoutAll" }); return cPrint(r.count + " affected", "c"); }
+  if (c === "purgepending") { const r = await post({ action: "purgePending", days: a[0] }); return cPrint(r.count + " removed", "c"); }
+  if (c === "purge") { const r = await post({ action: "purgeLogs", days: a[0] }); return cPrint(r.removed + " logs removed", "c"); }
+  if (c === "ban" || c === "unban") { await post({ action: c + "Id", id: a[0], text: a.slice(1).join(" ") }); return cPrint(c + " " + a[0], "c"); }
+  if (c === "xpevent") { const m = a[0] === "off" ? 1 : +a[0]; await post({ action: "xpEvent", mult: m, mins: a[1] || 60 }); return cPrint(m > 1 ? "x" + m + " XP event started" : "XP event stopped", "c"); }
+  if (c === "flash" || c === "abuse") { await post({ action: "flash", text: rest, secs: 6 }); return cPrint("Flash sent", "c"); }
+  if (c === "pin") { await post({ action: "pin", text: rest }); return cPrint("Pinned", "c"); }
+  if (c === "unpin") { await post({ action: "unpin" }); return cPrint("Pin removed", "c"); }
+  if (c === "maint") { await post({ action: "maintenance", on: a[0] === "on", msg: a.slice(1).join(" ") }); return cPrint("Maintenance " + (a[0] === "on" ? "ON" : "OFF"), "c"); }
+  if (c === "report") { const t = (await api("/api/users?report=1&days=7")).text; return cPrint(t); }
+  if (c === "health") { const h = await api("/api/users?health=1"); return cPrint(`Redis ${h.ping} ms · ${h.logs} logs · ${h.users} members · ${Object.entries(h.env).map(([k, v]) => (v ? "✅" : "❌") + k).join(" ")}`); }
+  throw new Error('Unknown command "/' + c + '". Try /help.');
+}
+async function cGo() {
+  const v = cons.value.trim(); if (!v) return; cHist.push(v); cPos = cHist.length; cons.value = ""; cPrint("> " + v, "c");
+  if (/^\/?(purge|purgepending|logoutall|approveall|ban|kick|maint)\b/i.test(v) && !(await confirmBox("Run this command?", v, "Run"))) return cPrint("Cancelled.");
+  try { await cRun(v); if (!/^\/?(help|clear|whois|xp|top|stats|report|health)\b/i.test(v)) loadAdmin(); } catch (e) { cPrint(e.message, "e"); }
+}
+$("consGo").onclick = cGo;
+cons.onkeydown = (e) => { if (e.key === "Enter") cGo(); else if (e.key === "ArrowUp" && cHist.length) { cPos = Math.max(0, cPos - 1); cons.value = cHist[cPos]; e.preventDefault(); } else if (e.key === "ArrowDown") { cPos = Math.min(cHist.length, cPos + 1); cons.value = cHist[cPos] || ""; } };
+cPrint("Type /help to see every command.");
+
 /* quizzes */
 let allQuizzes = [], allSubs = [], bq = null, taking = null, revTab = "pending";
 const STAT = { passed: ["Passed", "var(--unban)"], failed: ["Not passed", "var(--ban)"], pending: ["Awaiting review", "var(--warn)"] };
@@ -3062,5 +3105,7 @@ init();
 
 </script>
 
+<div id="flash"><div></div></div>
+<div id="xpchip" class="hide"></div>
 </body>
 </html>
