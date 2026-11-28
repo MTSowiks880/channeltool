@@ -112,6 +112,8 @@ main{padding:28px 36px 80px;max-width:1100px;width:100%}
 .role.trainer{color:#2dd4bf;border-color:rgba(45,212,191,.3);background:rgba(45,212,191,.08)}
 .role.developer{color:#f472b6;border-color:rgba(244,114,182,.35);background:rgba(244,114,182,.08)}
 .role.admin{color:var(--acc2);border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.08)}
+.role.leaker{color:#34d399;border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.08)}
+.role.decompiler{color:#38bdf8;border-color:rgba(56,189,248,.3);background:rgba(56,189,248,.08)}
 .role.mod{color:var(--mute);border-color:rgba(76,194,255,.3);background:rgba(76,194,255,.08)}
 .role.pending{color:var(--warn);border-color:rgba(245,181,68,.3);background:rgba(245,181,68,.08)}
 .role.banned{color:var(--ban);border-color:rgba(255,77,109,.3);background:rgba(255,77,109,.08)}
@@ -2145,6 +2147,12 @@ async function init() {
   buildChips(); buildActs();
   paintPin();
   show("app");
+  const lim = ["leaker", "decompiler"].includes(me.role);
+  if (lim) {
+    document.querySelectorAll(".nav[data-view]").forEach((n) => { if (!["forums", "settings"].includes(n.dataset.view)) n.classList.add("hide"); });
+    document.querySelectorAll(".adminOnly,.quizOnly").forEach((x) => x.classList.add("hide"));
+    return go("forums");
+  }
   loadLogs();
   if (admin) { loadUsers(true); loadSubs(true); }
   if (S.startView && S.startView !== "logs" && (admin || !["review", "members", "admin"].includes(S.startView))) go(S.startView);
@@ -2561,21 +2569,24 @@ async function loadUsers(silent) {
   } catch (e) { if (!silent) $("users").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 function renderUsers() {
-  const tabs = [["all", "All"], ["pending", "Pending"], ["team", "Team"], ["banned", "Removed"]];
-  const cnt = (t) => allUsers.filter((u) => t === "all" || (t === "team" ? ["mod", "trainer", "admin", "developer", "owner"].includes(u.role) : u.role === t)).length;
+  const tabs = [["all", "All"], ["pending", "Pending"], ["team", "Team"], ["leakers", "Leakers"], ["banned", "Removed"]];
+  const cnt = (t) => allUsers.filter((u) => t === "all" || (t === "team" ? ["mod", "trainer", "admin", "developer", "owner"].includes(u.role) : t === "leakers" ? ["leaker", "decompiler"].includes(u.role) : u.role === t)).length;
   $("mtabs").innerHTML = tabs.map(([k, n]) => `<button class="tab ${k === userTab ? "on" : ""}" data-t="${k}">${n} <span class="dim">${cnt(k)}</span></button>`).join("");
   $("mtabs").querySelectorAll(".tab").forEach((b) => b.onclick = () => { userTab = b.dataset.t; renderUsers(); });
-  const order = { pending: 0, owner: 1, developer: 2, admin: 3, trainer: 4, mod: 5, banned: 6 };
+  const order = { pending: 0, owner: 1, developer: 2, admin: 3, trainer: 4, mod: 5, leaker: 6, decompiler: 6, banned: 7 };
   const list = allUsers
-    .filter((u) => userTab === "all" || (userTab === "team" ? ["mod", "trainer", "admin", "developer", "owner"].includes(u.role) : u.role === userTab))
+    .filter((u) => userTab === "all" || (userTab === "team" ? ["mod", "trainer", "admin", "developer", "owner"].includes(u.role) : userTab === "leakers" ? ["leaker", "decompiler"].includes(u.role) : u.role === userTab))
     .sort((a, b) => (order[a.role] ?? 9) - (order[b.role] ?? 9));
   if (!list.length) { $("users").innerHTML = `<div class="empty" style="grid-column:1/-1">${ico("users")}<div>Nobody here.</div></div>`; return; }
   $("users").innerHTML = list.map((u, i) => {
     const btns = [];
-    const RK = { banned: 0, pending: 0, mod: 1, trainer: 1.5, admin: 2, developer: 3, owner: 4 };
+    const RK = { banned: 0, pending: 0, leaker: 0.5, decompiler: 0.5, mod: 1, trainer: 1.5, admin: 2, developer: 3, owner: 4 };
     const mr = RK[me.role] || 0, tr = RK[u.role] || 0;
     if (u.role !== "owner" && tr < mr) {
       if (u.role === "pending" || u.role === "banned") btns.push(["approve", "Approve", "ok"]);
+      if (mr >= 2 && tr < 1) { btns.push(["makeLeaker", "Leaker", "ghost"]); btns.push(["makeDecompiler", "Decompiler", "ghost"]); }
+      if (mr >= 2 && u.role === "leaker") btns.push(["removeLeaker", "Remove leaker", "ghost"]);
+      if (mr >= 2 && u.role === "decompiler") btns.push(["removeDecompiler", "Remove decompiler", "ghost"]);
       if (mr >= 2 && tr < 1.5) btns.push(["makeTrainer", "Make trainer", "ghost"]);
       if (mr >= 2 && u.role === "trainer") btns.push(["removeTrainer", "Remove trainer", "ghost"]);
       if (mr >= 3 && tr < 2) btns.push(["promote", "Make admin", "ghost"]);
@@ -2603,13 +2614,13 @@ $("users").addEventListener("click", async (e) => {
   if (a === "kick" && !(await confirmBox("Remove " + n + "?", "They will lose access to the panel.", "Remove"))) return;
   try {
     await api("/api/users", { method: "POST", body: { id: u, action: a } });
-    toast({ approve: "Approved " + n, kick: "Removed " + n, promote: n + " is now admin", demote: n + " is no longer admin", makeTrainer: n + " is now trainer", removeTrainer: n + " is no longer trainer", makeDeveloper: n + " is now developer", removeDeveloper: n + " is no longer developer" }[a]);
+    toast({ approve: "Approved " + n, kick: "Removed " + n, promote: n + " is now admin", demote: n + " is no longer admin", makeTrainer: n + " is now trainer", removeTrainer: n + " is no longer trainer", makeLeaker: n + " is now a leaker", makeDecompiler: n + " is now a decompiler", removeLeaker: n + " is no longer a leaker", removeDecompiler: n + " is no longer a decompiler", makeDeveloper: n + " is now developer", removeDeveloper: n + " is no longer developer" }[a]);
     loadUsers();
   } catch (err) { toast(err.message, true); }
 });
 
 /* admin section */
-const RK = { banned: 0, pending: 0, mod: 1, trainer: 1.5, admin: 2, developer: 3, owner: 4 };
+const RK = { banned: 0, pending: 0, leaker: 0.5, decompiler: 0.5, mod: 1, trainer: 1.5, admin: 2, developer: 3, owner: 4 };
 async function loadAdmin() {
   const mr = RK[me.role] || 0;
   try {
@@ -2623,7 +2634,7 @@ async function loadAdmin() {
     $("admUser").innerHTML = opt(below) || "<option value=''>Nobody</option>";
     $("admDelUser").innerHTML = opt(below) || "<option value=''>Nobody</option>";
     $("admLogUser").innerHTML = opt(allUsers) || "<option value=''>Nobody</option>";
-    const roles = ["pending", "mod", "trainer", "admin", "developer", "banned"].filter((x) => (RK[x] || 0) < mr || x === "pending" || x === "banned");
+    const roles = ["pending", "leaker", "decompiler", "mod", "trainer", "admin", "developer", "banned"].filter((x) => (RK[x] || 0) < mr || x === "pending" || x === "banned");
     $("admRole").innerHTML = roles.map((x) => `<option value="${x}">${x}</option>`).join("");
     const lock = mr < 3;
     $("admLock").textContent = lock ? "Locked: only a developer or the owner can use these maintenance tools." : "These actions cannot be undone.";
@@ -2730,7 +2741,7 @@ $("exAdm").onclick = () => { const q = (v) => '"' + String(v).replace(/"/g, '""'
   const close = () => { if (bg) bg.remove(); bg = null; };
   function build(q) {
     q = q.toLowerCase().trim(); items = [];
-    PAGES.filter((p) => !p[2] || admin).forEach((p) => { if (!q || p[1].toLowerCase().includes(q)) items.push([p[1], "page", () => go(p[0])]); });
+    PAGES.filter((p) => (!p[2] || admin) && (!["leaker", "decompiler"].includes(me.role) || ["forums", "settings"].includes(p[0]))).forEach((p) => { if (!q || p[1].toLowerCase().includes(q)) items.push([p[1], "page", () => go(p[0])]); });
     if (q.length > 1) {
       (allUsers || []).filter((u) => (u.name + " " + u.username).toLowerCase().includes(q)).slice(0, 6).forEach((u) => items.push([u.name, "member · " + u.role, () => showProfileCard({ id: u.id, name: u.name, avatar: u.avatar, role: u.role })]));
       [...new Set((allLogs || []).map((l) => l.target))].filter((t) => String(t).toLowerCase().includes(q)).slice(0, 5).forEach((t) => items.push([t, "target · search logs", () => { go("logs"); const f = $("q"); if (f) { f.value = t; f.dispatchEvent(new Event("input", { bubbles: true })); } }]));
@@ -2793,7 +2804,7 @@ const cons = $("consIn"), cOut = $("cons"), cHist = []; let cPos = 0;
 const cPrint = (t, k) => { const d = document.createElement("div"); if (k) d.className = k; d.textContent = t; cOut.appendChild(d); cOut.scrollTop = cOut.scrollHeight; };
 const cFind = (q) => { q = String(q || "").replace(/^@/, "").toLowerCase(); return allUsers.find((u) => u.id === q || (u.username || "").toLowerCase() === q) || allUsers.find((u) => (u.name || "").toLowerCase() === q) || allUsers.find((u) => (u.name || "").toLowerCase().includes(q) || (u.username || "").toLowerCase().includes(q)); };
 const CMDS = {
-  help: "Commands:\n/stats  /whois <user>  /xp <user>  /top\n/role <user> <role> [days]  /timeout <user> <days>  /approve <user>  /approveall\n/kick <user>  /logout <user>  /logoutall  /note <user> <text>\n/ban <id> [7d] [reason]  /unban <id>  /xpevent <2|3|4|off> [min]  /quest <goal> <days> <bonus>|off\n/lock on|off  /readonly on|off  /givexp <user> <n>  /leave <user> [off]  /suggest  /csv  /flash <text>  /pin <text>  /unpin  /maint on|off [msg]\n/purge <days>  /purgepending <days>  /report  /health  /clear\n<user> = name, @username or Discord ID.",
+  help: "Commands:\n/stats  /whois <user>  /xp <user>  /top\n/role <user> <role> [days]  /timeout <user> <days>  /approve <user>  /approveall\n/kick <user>  /logout <user>  /logoutall  /note <user> <text>\n/ban <id> [7d] [reason]  /unban <id>  /xpevent <2|3|4|off> [min]  /quest <goal> <days> <bonus>|off\n/role <user> leaker|decompiler  /lock on|off  /readonly on|off  /givexp <user> <n>  /leave <user> [off]  /suggest  /csv  /flash <text>  /pin <text>  /unpin  /maint on|off [msg]\n/purge <days>  /purgepending <days>  /report  /health  /clear\n<user> = name, @username or Discord ID.",
 };
 async function cRun(line) {
   const [c0, ...a] = line.trim().replace(/^\//, "").split(/\s+/); const c = (c0 || "").toLowerCase(), rest = a.join(" ");
